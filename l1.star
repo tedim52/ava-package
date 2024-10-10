@@ -10,7 +10,7 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
     subnet_id = chain_info["SubnetId"]
 
     # store subnet id
-    if l1_counter == 1:
+    if l1_counter == 0:
         utils.append_contents_to_file(plan, builder.BUILDER_SERVICE_NAME, "/tmp/data/subnet_ids.txt", subnet_id)
     else:   
         utils.append_contents_to_file(plan, builder.BUILDER_SERVICE_NAME, "/tmp/data/subnet_ids.txt", ",{0}".format(subnet_id))
