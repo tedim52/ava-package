@@ -1,0 +1,59 @@
+{
+  "info-api": {
+    "base-url": "{{.InfoAPIBaseURL}}"
+  },
+  "p-chain-api": {
+    "base-url": "{{.PChainAPIBaseURL}}"
+  },
+  "source-blockchains": [
+    {{- $length := len .SourceBlockchains }}
+    {{- $isFirst := true }}
+    {{- range $index, $blockchain := .SourceBlockchains }}
+    {{if $isFirst}}
+      {{$isFirst = false}}
+    {{else}}
+      ,
+    {{end}}
+    {
+      "subnet-id": "{{$blockchain.SubnetId}}",
+      "blockchain-id": "{{$blockchain.BlockchainId}}",
+      "vm": "evm",
+      "rpc-endpoint": {
+        "base-url": "{{$blockchain.RPCEndpointBaseURL}}"
+      },
+      "ws-endpoint": {
+        "base-url": "{{$blockchain.WSEndpointBaseURL}}"
+      },
+      "message-contracts": {
+        "{{$blockchain.MessageContractAddress}}": {
+          "message-format": "{{$blockchain.MessageFormat}}",
+          "settings": {
+            "reward-address": "0xc0ffee254729296a45a3885639AC7E10F9d54979"
+          }
+        }
+      }
+    }
+    {{- end }}
+  ],
+  "destination-blockchains": [
+    {{- $length := len .DestinationBlockchains }}
+    {{- $isFirst := true }}
+    {{- range $index, $blockchain := .DestinationBlockchains }}
+    {{if $isFirst}}
+      {{$isFirst = false}}
+    {{else}}
+      ,
+    {{end}}
+    {
+      "subnet-id": "{{$blockchain.SubnetId}}",
+      "blockchain-id": "{{$blockchain.BlockchainId}}",
+      "vm": "evm",
+      "rpc-endpoint": {
+        "base-url": "{{$blockchain.RPCEndpointBaseURL}}"
+      },
+      "account-private-key": "{{$blockchain.AccountPrivateKey}}"
+    }
+    {{- end }}
+  ],
+  "redis-url": "{{ .RedisURL }}"
+}

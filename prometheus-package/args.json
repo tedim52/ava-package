@@ -1,0 +1,11 @@
+{
+    "metrics_jobs": [
+        {
+            "Name": "" , 
+            "Endpoint": "", 
+            "Labels": {}, 
+            "MetricsPath": "", 
+            "ScrapeInterval": ""
+        }
+    ]
+}

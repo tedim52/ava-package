@@ -1,0 +1,23 @@
+{
+    "base-network-id": "1337",
+    "chain-configs": [
+        {
+            "name": "myblockchain",
+            "vm": "subnetevm",
+            "network-id": "1337",
+            "enable-teleporter": true
+        },
+        {
+            "name": "myblockchain",
+            "vm": "subnetevm",
+            "network-id": "1337",
+            "enable-teleporter": true
+        }
+    ],
+    "num-nodes": 4,
+    "node-cfg": {
+        "network-id": "1337",
+        "staking-enabled": false,
+        "health-check-frequency": "5s"
+    }
+}
