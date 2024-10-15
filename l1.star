@@ -27,9 +27,18 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
 
 def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id, chain_name, l1_counter):
     plan.exec(
+        description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = builder.BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter)]
+            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter, "create")]
+        )
+    )
+
+    plan.exec(
+        description="Adding validators for {0}".format(chain_name),
+        service_name = builder.BUILDER_SERVICE_NAME,
+        recipe = ExecRecipe(
+            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter, "addvalidators")]
         )
     )
 

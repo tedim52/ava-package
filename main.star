@@ -37,13 +37,14 @@ def run(plan, args):
     )
     
     # create l1s
+    tx_pk = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
     l1_info = {}
     for idx, chain in enumerate(chain_configs):
         chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx)
         l1_info[chain_name] = chain_info
         
         # launch tx spammer for this chain
-        tx_spammer.spam_transactions(plan, chain_info["RPCEndpointBaseURL"], "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027", idx)
+        tx_spammer.spam_transactions(plan, chain_info["RPCEndpointBaseURL"], tx_pk, idx)
 
     # start relayer
     relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
@@ -53,11 +54,13 @@ def run(plan, args):
     # start prom and grafana
     observability.launch_observability(plan, node_info)
 
-    # start a faucet
-
     # start blockscout
 
+    # start a faucet
+
     # start teleporter frontend
+
+    # start bridge frontend UI frontend
 
     return l1_info
    

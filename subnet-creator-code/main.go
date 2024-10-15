@@ -34,11 +34,13 @@ const (
 	numValidatorNodesIndex = 4
 	isElasticIndex         = 5
 	l1CounterIndex         = 6
-	minArgs                = 7
+	operationIndex         = 7
+	minArgs                = 8
 	nonZeroExitCode        = 1
 	nodeIdPathFormat       = "/tmp/data/node-%d/node_id.txt"
+
 	// TODO: pass this in via a variable
-	subnetGenesisPath = "/tmp/subnet-genesis/example-subnet-genesis.json"
+	subnetGenesisPath = "/tmp/subnet-genesis/example-subnet-genesis-with-teleporter.json"
 
 	// validate from a minute after now
 	startTimeDelayFromNow = 10 * time.Minute
@@ -133,76 +135,153 @@ func main() {
 		fmt.Printf("an error occurred converting is elastic '%v' to bool", isElastic)
 	}
 	l1NumArg := os.Args[l1CounterIndex]
-	_, err = strconv.Atoi(l1NumArg)
+	l1Num, err := strconv.Atoi(l1NumArg)
 	if err != nil {
 		fmt.Printf("An error occurred while converting l1Num arg to integer: %v\n", err)
 		os.Exit(nonZeroExitCode)
 	}
 
+	operation := os.Args[operationIndex]
+
 	fmt.Printf("trying uri '%v' vmID '%v' chainName '%v' and numValidatorNodes '%v'", uri, vmIDStr, chainName, numValidatorNodes)
+	switch operation {
+	case "create":
+		w, err := newWallet(uri)
+		if err != nil {
+			fmt.Printf("Couldn't create wallet \n")
+			os.Exit(nonZeroExitCode)
+		}
 
-	w, err := newWallet(uri)
-	if err != nil {
-		fmt.Printf("Couldn't create wallet \n")
-		os.Exit(nonZeroExitCode)
-	}
+		subnetId, err := createSubnet(w)
+		if err != nil {
+			fmt.Printf("an error occurred while creating subnet: %v\n", err)
+			os.Exit(nonZeroExitCode)
+		}
+		fmt.Printf("subnet created created with id '%v'\n", subnetId)
+		subnetId.String()
 
-	subnetId, err := createSubnet(w)
-	if err != nil {
-		fmt.Printf("an error occurred while creating subnet: %v\n", err)
-		os.Exit(nonZeroExitCode)
-	}
-	fmt.Printf("subnet created created with id '%v'\n", subnetId)
+		vmID, err := ids.FromString(vmIDStr)
+		if err != nil {
+			fmt.Printf("an error occurred converting '%v' vm id string to ids.ID: %v", vmIDStr, err)
+		}
 
-	vmID, err := ids.FromString(vmIDStr)
-	if err != nil {
-		fmt.Printf("an error occurred converting '%v' vm id string to ids.ID: %v", vmIDStr, err)
-	}
-	chainId, allocations, genesisChainId, err := createBlockChain(w, subnetId, vmID, chainName)
-	if err != nil {
-		fmt.Printf("an erorr occurred while creating chain: %v\n", err)
-		os.Exit(nonZeroExitCode)
-	}
-	fmt.Printf("chain created with id '%v' and vm id '%v'\n", chainId, vmID)
+		chainId, allocations, genesisChainId, err := createBlockChain(w, subnetId, vmID, chainName)
+		if err != nil {
+			fmt.Printf("an error occurred while creating chain: %v\n", err)
+			os.Exit(nonZeroExitCode)
+		}
+		fmt.Printf("chain created with id '%v' and vm id '%v'\n", chainId, vmID)
 
-	// disable this for elastic subnet
-	var validatorIds []ids.ID
-	if !isElastic {
+		err = writeCreateOutputs(subnetId, vmID, chainId, genesisChainId, allocations, l1Num)
+		if err != nil {
+			fmt.Printf("an error occurred while writing create outputs: %v\n", err)
+			os.Exit(nonZeroExitCode)
+		}
+	case "addvalidators":
+		subnetIdPath := fmt.Sprintf(subnetIdOutput, l1Num)
+		subnetIdBytes, err := os.ReadFile(subnetIdPath)
+		if err != nil {
+			fmt.Printf("an error occurred reading subnet id '%v' file: %v", subnetIdPath, err)
+			os.Exit(nonZeroExitCode)
+		}
+		fmt.Printf("retrieved subnet id '%v'\n", string(subnetIdBytes))
+		subnetId, err := ids.FromString(string(subnetIdBytes))
+		if err != nil {
+			fmt.Printf("an error converting subnet id '%v' to bytes: %v", string(subnetIdBytes), err)
+			os.Exit(nonZeroExitCode)
+		}
+
+		w, err := newWalletWithSubnet(uri, subnetId)
+		if err != nil {
+			fmt.Printf("an error with creating subnet id wallet")
+			os.Exit(nonZeroExitCode)
+		}
+
+		var validatorIds []ids.ID
 		validatorIds, err = addSubnetValidators(w, subnetId, numValidatorNodes)
 		if err != nil {
 			fmt.Printf("an error occurred while adding validators: %v\n", err)
 			os.Exit(nonZeroExitCode)
 		}
 		fmt.Printf("validators added with ids '%v'\n", validatorIds)
+		err = writeAddValidatorsOutput(subnetId, validatorIds)
+		if err != nil {
+			fmt.Printf("an error occurred while writing add validators outputs: %v\n", err)
+			os.Exit(nonZeroExitCode)
+		}
+	default:
+		fmt.Println("Operation not supported.")
 	}
 
-	var assetId, exportId, importId, transformationId ids.ID
-	if isElastic {
-		assetId, exportId, importId, err = createAssetOnXChainImportToPChain(w, "foo token", "FOO", 9, 100000000000)
-		if err != nil {
-			fmt.Printf("an error occurred while creating asset: %v\n", err)
-			os.Exit(nonZeroExitCode)
-		}
-		fmt.Printf("created asset '%v' exported with id '%v' and imported with id '%v'\n", assetId, exportId, importId)
-		transformationId, err = transformSubnet(w, subnetId, assetId)
-		if err != nil {
-			fmt.Printf("an error occurred while transforming subnet: %v\n", err)
-			os.Exit(nonZeroExitCode)
-		}
-		fmt.Printf("transformed subnet and got transformation id '%v'\n", transformationId)
-		validatorIds, err = addPermissionlessValidator(w, assetId, subnetId, numValidatorNodes)
-		if err != nil {
-			fmt.Printf("an error occurred while creating permissionless validators: %v\n", err)
-			os.Exit(nonZeroExitCode)
-		}
-		fmt.Printf("added permissionless validators with ids '%v'\n", validatorIds)
-	}
+	// var assetId, exportId, importId, transformationId ids.ID
+	// if isElastic {
+	// 	assetId, exportId, importId, err = createAssetOnXChainImportToPChain(w, "foo token", "FOO", 9, 100000000000)
+	// 	if err != nil {
+	// 		fmt.Printf("an error occurred while creating asset: %v\n", err)
+	// 		os.Exit(nonZeroExitCode)
+	// 	}
+	// 	fmt.Printf("created asset '%v' exported with id '%v' and imported with id '%v'\n", assetId, exportId, importId)
+	// 	transformationId, err = transformSubnet(w, subnetId, assetId)
+	// 	if err != nil {
+	// 		fmt.Printf("an error occurred while transforming subnet: %v\n", err)
+	// 		os.Exit(nonZeroExitCode)
+	// 	}
+	// 	fmt.Printf("transformed subnet and got transformation id '%v'\n", transformationId)
+	// 	validatorIds, err = addPermissionlessValidator(w, assetId, subnetId, numValidatorNodes)
+	// 	if err != nil {
+	// 		fmt.Printf("an error occurred while creating permissionless validators: %v\n", err)
+	// 		os.Exit(nonZeroExitCode)
+	// 	}
+	// 	fmt.Printf("added permissionless validators with ids '%v'\n", validatorIds)
+	// }
 
-	err = writeOutputs(subnetId, chainId, validatorIds, allocations, genesisChainId, assetId, exportId, importId, transformationId, isElastic, l1NumArg)
-	if err != nil {
-		fmt.Printf("an error occurred while writing outputs: %v\n", err)
-		os.Exit(nonZeroExitCode)
+	// err = writeOutputs(subnetId, chainId, validatorIds, allocations, genesisChainId, assetId, exportId, importId, transformationId, isElastic, l1NumArg)
+	// if err != nil {
+	// 	fmt.Printf("an error occurred while writing outputs: %v\n", err)
+	// 	os.Exit(nonZeroExitCode)
+	// }
+}
+
+func writeCreateOutputs(subnetId ids.ID, vmId ids.ID, chainId ids.ID, genesisChainId string, allocations map[string]string, l1Num int) error {
+	if err := os.MkdirAll(fmt.Sprintf(subnetIdParentPath, l1Num), 0700); err != nil {
+		return err
 	}
+	if err := os.MkdirAll(fmt.Sprintf(subnetIdParentPath, l1Num), 0700); err != nil {
+		return err
+	}
+	if err := os.WriteFile(fmt.Sprintf(subnetIdOutput, l1Num), []byte(subnetId.String()), perms.ReadOnly); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(fmt.Sprintf(subnetIdParentPath, subnetId.String()), 0700); err != nil {
+		return err
+	}
+	if err := os.WriteFile(fmt.Sprintf(chainIdOutput, subnetId.String()), []byte(chainId.String()), perms.ReadOnly); err != nil {
+		return err
+	}
+	if err := os.WriteFile(fmt.Sprintf(genesisChainIdOutput, subnetId.String()), []byte(genesisChainId), perms.ReadOnly); err != nil {
+		return err
+	}
+	var allocationList []string
+	for addr, balance := range allocations {
+		allocationList = append(allocationList, addr+addrAllocDelimiter+balance)
+	}
+	if err := os.WriteFile(fmt.Sprintf(allocationsOutput, subnetId.String()), []byte(strings.Join(allocationList, allocationDelimiter)), perms.ReadOnly); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeAddValidatorsOutput(subnetId ids.ID, validatorIds []ids.ID) error {
+	for index, validatorId := range validatorIds {
+		if err := os.MkdirAll(fmt.Sprintf(parentPath, subnetId.String(), index), 0700); err != nil {
+			return err
+		}
+		err := os.WriteFile(fmt.Sprintf(validatorIdsOutput, subnetId.String(), index), []byte(validatorId.String()), perms.ReadOnly)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func writeOutputs(subnetId ids.ID, chainId ids.ID, validatorIds []ids.ID, allocations map[string]string, genesisChainId string, assetId, exportId, importId, transformationId ids.ID, isElastic bool, l1Num string) error {
@@ -386,6 +465,10 @@ func createAssetOnXChainImportToPChain(w *wallet, name string, symbol string, de
 
 func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.ID, error) {
 	ctx := context.Background()
+	// w, err := newWallet(uri)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("could not create new wallet for adding subnet validators: %v", err)
+	// }
 	var validatorIDs []ids.ID
 	for index := 0; index < numValidators; index++ {
 		nodeIdPath := fmt.Sprintf(nodeIdPathFormat, index)
@@ -399,7 +482,11 @@ func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.I
 		}
 		startTime := time.Now().Add(startTimeDelayFromNow)
 		endTime := startTime.Add(endTimeFromStartTime)
-		addValidatorTx, err := w.p.IssueAddSubnetValidatorTx(
+		var addValidatorTx *txs.Tx
+		var txErr error
+		// retryCount := 30
+		// for retryCount > 0 {
+		addValidatorTx, txErr = w.p.IssueAddSubnetValidatorTx(
 			&txs.SubnetValidator{
 				Validator: txs.Validator{
 					NodeID: nodeId,
@@ -412,8 +499,16 @@ func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.I
 			common.WithContext(ctx),
 			defaultPoll,
 		)
-		if err != nil {
-			return nil, fmt.Errorf("an error occurred while adding node '%v' as validator: %v", index, err)
+		// if txErr != nil {
+		// 	retryCount -= 1
+		// 	fmt.Printf("an error occurred issuing an add subnet validator tx, trying '%v' more times:\n %v\n", retryCount, txErr.Error())
+		// 	time.Sleep(30 * time.Second)
+		// } else {
+		// 	retryCount = 0
+		// }
+		// }
+		if txErr != nil {
+			return nil, fmt.Errorf("an error occurred while adding node '%v' as validator: %v", index, txErr)
 		}
 		validatorIDs = append(validatorIDs, addValidatorTx.ID())
 	}
@@ -470,12 +565,39 @@ func createSubnet(w *wallet) (ids.ID, error) {
 	return createSubnetTx.ID(), nil
 }
 
-func newWallet(uri string) (*wallet, error) {
+func newWalletWithSubnet(uri string, subnetId ids.ID) (*wallet, error) {
 	ctx := context.Background()
+	fmt.Println(genesis.EWOQKey)
+	fmt.Println(genesis.EWOQKey.Address())
 	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
 
-	// MakeWallet fetches the available UTXOs owned by [kc] on the network that
-	// [uri] is hosting.
+	// MakeWallet fetches the available UTXOs owned by [kc] on the network that [uri] is hosting.
+	walletSyncStartTime := time.Now()
+	createdWallet, err := primary.MakeWallet(ctx, &primary.WalletConfig{
+		URI:          uri,
+		AVAXKeychain: kc,
+		EthKeychain:  kc,
+		SubnetIDs:    []ids.ID{subnetId},
+	})
+	if err != nil {
+		log.Fatalf("failed to initialize wallet: %s\n", err)
+	}
+	log.Printf("synced wallet in %s\n", time.Since(walletSyncStartTime))
+
+	return &wallet{
+		p: createdWallet.P(),
+		x: createdWallet.X(),
+		c: createdWallet.C(),
+	}, nil
+}
+
+func newWallet(uri string) (*wallet, error) {
+	ctx := context.Background()
+	fmt.Println(genesis.EWOQKey)
+	fmt.Println(genesis.EWOQKey.Address())
+	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
+
+	// MakeWallet fetches the available UTXOs owned by [kc] on the network that [uri] is hosting.
 	walletSyncStartTime := time.Now()
 	createdWallet, err := primary.MakeWallet(ctx, &primary.WalletConfig{
 		URI:          uri,
@@ -492,4 +614,20 @@ func newWallet(uri string) (*wallet, error) {
 		x: createdWallet.X(),
 		c: createdWallet.C(),
 	}, nil
+}
+
+func printBalances(w *wallet) error {
+	cChainAssets, err := w.c.Builder().GetBalance()
+	if err != nil {
+		return fmt.Errorf("could not get balance of wallet: %v", err)
+	}
+	fmt.Printf("cChain assets amount: %v\n", cChainAssets)
+	pChainAssets, err := w.p.Builder().GetBalance()
+	if err != nil {
+		return fmt.Errorf("could not get balance of wallet: %v", err)
+	}
+	for id, numAssets := range pChainAssets {
+		fmt.Printf("wallet has %v of asset with id %v\n", numAssets, id)
+	}
+	return nil
 }
