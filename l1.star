@@ -51,6 +51,7 @@ def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id,
     for index in range (0, num_nodes):
         validator_ids.append(utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/node-{1}/validator_id.txt".format(subnet_id, index)))
 
+    http_trimmed_uri = uri.replace("http://", "", 1)
     return {
         "SubnetId": subnet_id,
         "BlockchainId": chain_id, 
@@ -58,5 +59,5 @@ def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id,
         "Allocations": allocations,
         "ValidatorIds": validator_ids,
         "RPCEndpointBaseURL": "{0}/ext/bc/{1}/rpc".format(uri, chain_id),
-        "WSEndpointBaseURL": "{0}/ext/bc/{1}/ws".format(uri, chain_id),
+        "WSEndpointBaseURL": "ws://{0}/ext/bc/{1}/ws".format(http_trimmed_uri, chain_id),
     }
