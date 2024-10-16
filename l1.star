@@ -44,6 +44,7 @@ def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id,
 
     subnet_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/subnetId.txt".format(l1_counter))
     chain_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/chainId.txt".format(subnet_id))
+    hex_chain_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/hexChainId.txt".format(subnet_id))
     allocations = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/allocations.txt".format(subnet_id))
     genesis_chain_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/genesisChainId.txt".format(subnet_id))
 
@@ -55,6 +56,7 @@ def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id,
     return {
         "SubnetId": subnet_id,
         "BlockchainId": chain_id, 
+        "BlockchainIdHex": hex_chain_id,
         "VM": vm_id,
         "Allocations": allocations,
         "ValidatorIds": validator_ids,

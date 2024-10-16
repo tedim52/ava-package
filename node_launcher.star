@@ -31,8 +31,8 @@ def launch(
     for index in range(0, node_count):
         node_name = NODE_NAME_PREFIX + str(index)
 
-        node_data_dirpath = ABS_DATA_DIRPATH + node_name + "/"
-        node_config_filepath = node_data_dirpath + "config.json"
+        node_data_dirpath = ABS_DATA_DIRPATH + node_name
+        node_config_filepath = node_data_dirpath + "/config.json"
 
         launch_node_cmd = [
             "nohup",
@@ -57,23 +57,6 @@ def launch(
         log_files_cmds = ["touch /tmp/{0}".format(log_file) for log_file in log_files]
         log_file_cmd = " && ".join(log_files_cmds)
 
-        # if custom_subnet_vm_path:
-        #     subnet_evm_plugin = plan.upload_files(custom_subnet_vm_path)
-        #     # take only dir from custom_subnet_vm_path
-        #     plan.print("subnet_evm_plugin: {0}".format(custom_subnet_vm_path))
-        #     # Extract the directory part of the path
-        #     last_slash_index = custom_subnet_vm_path.rfind('/')
-        #     subnet_evm_plugin_dir = custom_subnet_vm_path[:last_slash_index]
-        #     plan.print("subnet_evm_plugin_dir: {0}".format(subnet_evm_plugin_dir))
-        #     node_files = {
-        #         "/tmp/data": genesis,
-        #         subnet_evm_plugin_dir: subnet_evm_plugin
-        #     }
-        # elif custom_subnet_vm_url:
-        #     node_files = {
-        #         "/tmp/data": genesis
-        #     }
-
         node_files = {
             "/tmp/data": genesis
         }
@@ -81,7 +64,6 @@ def launch(
         node_service_config = ServiceConfig(
             image=image,
             entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
-            # entrypoint=["/bin/sh", "-c", " ".join(launch_node_cmd)],
             ports={
                 "rpc": PortSpec(number=9650, transport_protocol="TCP", wait=None),
                 "staking": PortSpec(number=9651, transport_protocol="TCP", wait=None)
@@ -111,13 +93,12 @@ def launch(
                 command=["mkdir", "-p", ABS_PLUGIN_DIRPATH]
             )
         )
-        # if custom_subnet_vm_path:
-        #     cp(plan, node_name, custom_subnet_vm_path, ABS_PLUGIN_DIRPATH + vmId)
-        # elif custom_subnet_vm_url:
+
         if custom_subnet_vm_url:
             download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
         plan.exec(
+            description="Restarting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
             service_name=node_name,
             recipe=ExecRecipe(
                 command=["/bin/sh", "-c", " ".join(launch_node_cmd) + " >/dev/null 2>&1 &"],

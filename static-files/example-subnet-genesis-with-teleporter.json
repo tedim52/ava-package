@@ -55,6 +55,10 @@
         "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC": {
             "balance": "0xd3c21bcecceda1000000",
             "nonce": 1
+        },
+        "0x78af694930E98D18AB69C04E57071850d8Aa05dC": {
+            "balance": "0xd3c21bcecceda1000000",
+            "nonce": 1
         }
     },
     "airdropHash": "0x0000000000000000000000000000000000000000000000000000000000000000",

@@ -1,7 +1,7 @@
 redis = import_module("github.com/kurtosis-tech/redis-package/main.star")
 
 RELAYER_IMAGE = "avaplatform/awm-relayer:latest"
-ACCOUNT_PRIVATE_KEY = "0x22c3da842861a764c01b5263551efdc382a35424f6469915d0bdb606dc633e2f"
+ACCOUNT_PRIVATE_KEY = "d28fb31486d7bd9f7fbe4c9087939ce765d4c3acf577756b1f9af9702956a063"
 MESSAGE_CONTRACT_ADDRESS = "0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf"
 MESSAGE_FORMAT = "teleporter"
 

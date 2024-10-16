@@ -56,6 +56,7 @@ const (
 	subnetIdParentPath   = "/tmp/subnet/%v"
 	subnetIdOutput       = "/tmp/subnet/%v/subnetId.txt"
 	chainIdOutput        = "/tmp/subnet/%v/chainId.txt"
+	hexChainIdOutput     = "/tmp/subnet/%v/hexChainId.txt"
 	genesisChainIdOutput = "/tmp/subnet/%v/genesisChainId.txt"
 	allocationsOutput    = "/tmp/subnet/%v/allocations.txt"
 
@@ -165,14 +166,14 @@ func main() {
 			fmt.Printf("an error occurred converting '%v' vm id string to ids.ID: %v", vmIDStr, err)
 		}
 
-		chainId, allocations, genesisChainId, err := createBlockChain(w, subnetId, vmID, chainName)
+		chainId, hexChainId, allocations, genesisChainId, err := createBlockChain(w, subnetId, vmID, chainName)
 		if err != nil {
 			fmt.Printf("an error occurred while creating chain: %v\n", err)
 			os.Exit(nonZeroExitCode)
 		}
 		fmt.Printf("chain created with id '%v' and vm id '%v'\n", chainId, vmID)
 
-		err = writeCreateOutputs(subnetId, vmID, chainId, genesisChainId, allocations, l1Num)
+		err = writeCreateOutputs(subnetId, vmID, chainId, hexChainId, genesisChainId, allocations, l1Num)
 		if err != nil {
 			fmt.Printf("an error occurred while writing create outputs: %v\n", err)
 			os.Exit(nonZeroExitCode)
@@ -242,7 +243,7 @@ func main() {
 	// }
 }
 
-func writeCreateOutputs(subnetId ids.ID, vmId ids.ID, chainId ids.ID, genesisChainId string, allocations map[string]string, l1Num int) error {
+func writeCreateOutputs(subnetId ids.ID, vmId ids.ID, chainId ids.ID, hexChainId string, genesisChainId string, allocations map[string]string, l1Num int) error {
 	if err := os.MkdirAll(fmt.Sprintf(subnetIdParentPath, l1Num), 0700); err != nil {
 		return err
 	}
@@ -256,6 +257,9 @@ func writeCreateOutputs(subnetId ids.ID, vmId ids.ID, chainId ids.ID, genesisCha
 		return err
 	}
 	if err := os.WriteFile(fmt.Sprintf(chainIdOutput, subnetId.String()), []byte(chainId.String()), perms.ReadOnly); err != nil {
+		return err
+	}
+	if err := os.WriteFile(fmt.Sprintf(hexChainIdOutput, subnetId.String()), []byte(hexChainId), perms.ReadOnly); err != nil {
 		return err
 	}
 	if err := os.WriteFile(fmt.Sprintf(genesisChainIdOutput, subnetId.String()), []byte(genesisChainId), perms.ReadOnly); err != nil {
@@ -516,15 +520,15 @@ func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.I
 	return validatorIDs, nil
 }
 
-func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string) (ids.ID, map[string]string, string, error) {
+func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string) (ids.ID, string, map[string]string, string, error) {
 	ctx := context.Background()
 	genesisData, err := os.ReadFile(subnetGenesisPath)
 	if err != nil {
-		return ids.Empty, nil, "", err
+		return ids.Empty, "", nil, "", err
 	}
 	var genesis Genesis
 	if err := json.Unmarshal(genesisData, &genesis); err != nil {
-		return ids.Empty, nil, "", fmt.Errorf("an error occured while unmarshalling genesis json: %v")
+		return ids.Empty, "", nil, "", fmt.Errorf("an error occured while unmarshalling genesis json: %v")
 	}
 	allocations := map[string]string{}
 	for addr, allocation := range genesis.Alloc {
@@ -542,9 +546,9 @@ func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string)
 		defaultPoll,
 	)
 	if err != nil {
-		return ids.Empty, nil, "", nil
+		return ids.Empty, "", nil, "", nil
 	}
-	return createChainTx.ID(), allocations, genesisChainId, nil
+	return createChainTx.ID(), createChainTx.TxID.Hex(), allocations, genesisChainId, nil
 }
 
 func createSubnet(w *wallet) (ids.ID, error) {

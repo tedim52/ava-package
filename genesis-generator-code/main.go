@@ -12,10 +12,13 @@ import (
 	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/staking"
+	"github.com/ava-labs/avalanchego/utils/crypto/bls"
 	"github.com/ava-labs/avalanchego/utils/perms"
+	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 )
 
 const (
+	signingNodeKeyPath  = "/tmp/data/node-%d/staking/signer.key"
 	stakingNodeKeyPath  = "/tmp/data/node-%d/staking/staker.key"
 	stakingNodeCertPath = "/tmp/data/node-%d/staking/staker.crt"
 	nodeIdPath          = "/tmp/data/node-%d/node_id.txt"
@@ -55,6 +58,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	genesisValidators := make([]ids.NodeID, numNodes)
+	validatorsProofOfPossessions := make([]*signer.ProofOfPossession, numNodes)
 	wg.Add(numNodes)
 	for index := 0; index < numNodes; index++ {
 		go func(index int) {
@@ -66,7 +70,7 @@ func main() {
 				fmt.Printf("An error occurred while generating keys for node %v: %v\n", index, err)
 				os.Exit(nonZeroExitCode)
 			}
-			fmt.Printf("Gnerated key and cert for node '%v' at '%v', '%v\n", index, keyPath, certPath)
+			fmt.Printf("Generated key and cert for node '%v' at '%v', '%v\n", index, keyPath, certPath)
 			cert, err := staking.LoadTLSCertFromFiles(keyPath, certPath)
 			if err != nil {
 				fmt.Printf("an error occurred while loading cert pair for node '%v': %v\n", index, err)
@@ -80,11 +84,23 @@ func main() {
 				fmt.Printf("an error occurred while writing out node id for node '%v': %v", index, err)
 				os.Exit(nonZeroExitCode)
 			}
-			fmt.Printf("node '%v' has node id '%v'\n", index, nodeId)
+
+			// need to add signer keys for avalanche warp messaging
+			blsSk, err := bls.NewSecretKey()
+			if err != nil {
+				fmt.Printf("could not create bls secret key for node '%v'\n", nodeId)
+				os.Exit(nonZeroExitCode)
+			}
+			if err = os.WriteFile(fmt.Sprintf(signingNodeKeyPath, index), blsSk.Serialize(), perms.ReadOnly); err != nil {
+				fmt.Printf("an error occurred while writing out bls secret key for node '%v': %v", index, err)
+				os.Exit(nonZeroExitCode)
+			}
+			validatorsProofOfPossessions[index] = signer.NewProofOfPossession(blsSk)
+
 			genesisValidators[index] = nodeId
+			fmt.Printf("node '%v' has node id '%v'\n", index, nodeId)
 		}(index)
 	}
-
 	wg.Wait()
 
 	fmt.Printf("generated '%v' nodes\n", len(genesisValidators))
@@ -95,11 +111,12 @@ func main() {
 	var initialStakers []genesis.UnparsedStaker
 	basicDelegationFee := 62500
 	// give staking reward to random address
-	for _, nodeId := range genesisValidators {
+	for idx, nodeId := range genesisValidators {
 		staker := genesis.UnparsedStaker{
 			NodeID:        nodeId,
 			RewardAddress: unparsedConfig.Allocations[1].AVAXAddr,
 			DelegationFee: uint32(basicDelegationFee),
+			Signer:        validatorsProofOfPossessions[idx],
 		}
 		basicDelegationFee = basicDelegationFee * 2
 		initialStakers = append(initialStakers, staker)
