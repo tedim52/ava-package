@@ -49,18 +49,16 @@ def run(plan, args):
     # start relayer
     relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
-    # additional services
-
     # start prom and grafana
     observability.launch_observability(plan, node_info)
 
-    # start blockscout
+    # additional services:
 
-    # start a faucet
+    # TODO: start bridge frontend UI frontend
 
-    # start teleporter frontend
+    # TODO: start blockscout explorer
 
-    # start bridge frontend UI frontend
+    # TODO: start a faucet
 
     return l1_info
    
