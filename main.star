@@ -56,9 +56,9 @@ def run(plan, args):
 
     # TODO: start bridge frontend UI frontend
 
-    # TODO: start blockscout explorer
-
     # TODO: start a faucet
+
+    # TODO: start blockscout explorer
 
     return l1_info
    

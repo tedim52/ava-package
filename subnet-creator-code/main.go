@@ -58,7 +58,7 @@ const (
 	validatorIdsOutput   = "/tmp/subnet/%v/node-%d/validator_id.txt"
 	subnetIdParentPath   = "/tmp/subnet/%v"
 	subnetIdOutput       = "/tmp/subnet/%v/subnetId.txt"
-	chainIdOutput        = "/tmp/subnet/%v/chainId.txt"
+	blockchainIdOutput   = "/tmp/subnet/%v/blockchainId.txt"
 	hexChainIdOutput     = "/tmp/subnet/%v/hexChainId.txt"
 	genesisChainIdOutput = "/tmp/subnet/%v/genesisChainId.txt"
 	allocationsOutput    = "/tmp/subnet/%v/allocations.txt"
@@ -259,7 +259,7 @@ func main() {
 	// }
 }
 
-func writeCreateOutputs(subnetId ids.ID, vmId ids.ID, chainId ids.ID, hexChainId string, genesisChainId string, allocations map[string]string, l1Num int) error {
+func writeCreateOutputs(subnetId ids.ID, vmId ids.ID, blockchainId ids.ID, hexChainId string, genesisChainId string, allocations map[string]string, l1Num int) error {
 	if err := os.MkdirAll(fmt.Sprintf(subnetIdParentPath, l1Num), 0700); err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func writeCreateOutputs(subnetId ids.ID, vmId ids.ID, chainId ids.ID, hexChainId
 	if err := os.MkdirAll(fmt.Sprintf(subnetIdParentPath, subnetId.String()), 0700); err != nil {
 		return err
 	}
-	if err := os.WriteFile(fmt.Sprintf(chainIdOutput, subnetId.String()), []byte(chainId.String()), perms.ReadOnly); err != nil {
+	if err := os.WriteFile(fmt.Sprintf(blockchainIdOutput, subnetId.String()), []byte(blockchainId.String()), perms.ReadOnly); err != nil {
 		return err
 	}
 	if err := os.WriteFile(fmt.Sprintf(hexChainIdOutput, subnetId.String()), []byte(hexChainId), perms.ReadOnly); err != nil {
@@ -326,9 +326,9 @@ func writeOutputs(subnetId ids.ID, chainId ids.ID, validatorIds []ids.ID, alloca
 	if err := os.MkdirAll(fmt.Sprintf(subnetIdParentPath, subnetId.String()), 0700); err != nil {
 		return err
 	}
-	if err := os.WriteFile(fmt.Sprintf(chainIdOutput, subnetId.String()), []byte(chainId.String()), perms.ReadOnly); err != nil {
-		return err
-	}
+	// if err := os.WriteFile(fmt.Sprintf(chainIdOutput, subnetId.String()), []byte(chainId.String()), perms.ReadOnly); err != nil {
+	// 	return err
+	// }
 	if err := os.WriteFile(fmt.Sprintf(genesisChainIdOutput, subnetId.String()), []byte(genesisChainId), perms.ReadOnly); err != nil {
 		return err
 	}

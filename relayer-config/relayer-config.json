@@ -1,0 +1,81 @@
+{
+  "info-api": {
+    "base-url": "http://172.16.0.5:9650"
+  },
+  "p-chain-api": {
+    "base-url": "http://172.16.0.5:9650"
+  },
+  "source-blockchains": [
+    
+      
+    
+    {
+      "subnet-id": "s5gML9jhJH8qFqAKtg8pPEcsHaomv3SBA7xJzsa7bJEqVHRnW",
+      "blockchain-id": "pAEnY2ZCApG9GXNkJ37g8NBbSvRt7JJJZxDZXZwc2p3xReuzC",
+      "vm": "evm",
+      "rpc-endpoint": {
+        "base-url": "http://172.16.0.5:9650/ext/bc/555555/rpc"
+      },
+      "ws-endpoint": {
+        "base-url": "ws://172.16.0.5:9650/ext/bc/555555/ws"
+      },
+      "message-contracts": {
+        "0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf": {
+          "message-format": "teleporter",
+          "settings": {
+            "reward-address": "0xc0ffee254729296a45a3885639AC7E10F9d54979"
+          }
+        }
+      }
+    }
+    
+      ,
+    
+    {
+      "subnet-id": "2MHXJj4hRsVPgh9MHuet8t5PLuhzeXNJ9ymDwvWYTanzmGGK1y",
+      "blockchain-id": "2Ef8v9ehpJq8KoHt2pZyyzNVHwBz2Sxo71vVe1vRX22H665sXx",
+      "vm": "evm",
+      "rpc-endpoint": {
+        "base-url": "http://172.16.0.5:9650/ext/bc/666666/rpc"
+      },
+      "ws-endpoint": {
+        "base-url": "ws://172.16.0.5:9650/ext/bc/666666/ws"
+      },
+      "message-contracts": {
+        "0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf": {
+          "message-format": "teleporter",
+          "settings": {
+            "reward-address": "0xc0ffee254729296a45a3885639AC7E10F9d54979"
+          }
+        }
+      }
+    }
+  ],
+  "destination-blockchains": [
+    
+      
+    
+    {
+      "subnet-id": "s5gML9jhJH8qFqAKtg8pPEcsHaomv3SBA7xJzsa7bJEqVHRnW",
+      "blockchain-id": "pAEnY2ZCApG9GXNkJ37g8NBbSvRt7JJJZxDZXZwc2p3xReuzC",
+      "vm": "evm",
+      "rpc-endpoint": {
+        "base-url": "http://172.16.0.5:9650/ext/bc/555555/rpc"
+      },
+      "account-private-key": "d28fb31486d7bd9f7fbe4c9087939ce765d4c3acf577756b1f9af9702956a063"
+    }
+    
+      ,
+    
+    {
+      "subnet-id": "2MHXJj4hRsVPgh9MHuet8t5PLuhzeXNJ9ymDwvWYTanzmGGK1y",
+      "blockchain-id": "2Ef8v9ehpJq8KoHt2pZyyzNVHwBz2Sxo71vVe1vRX22H665sXx",
+      "vm": "evm",
+      "rpc-endpoint": {
+        "base-url": "http://172.16.0.5:9650/ext/bc/666666/rpc"
+      },
+      "account-private-key": "d28fb31486d7bd9f7fbe4c9087939ce765d4c3acf577756b1f9af9702956a063"
+    }
+  ],
+  "redis-url": "redis://redis:6379"
+}
