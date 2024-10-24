@@ -25,7 +25,20 @@ def init(plan, node_cfg_map):
     )
 
     subnet_genesis = plan.upload_files("./static-files/example-subnet-genesis.json", name="subnet-genesis")
-    subnet_genesis_with_teleporter = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json", name="subnet-genesis-with-teleporter")
+    # subnet_genesis_with_teleporter = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json", name="subnet-genesis-with-teleporter")
+    # subnet_genesis_with_teleporter_tmpl = read_file("./static-files/example-subnet-genesis-with-teleporter.json.tmpl")
+    subnet_genesis_with_teleporter = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json.tmpl", "subnet_genesis_with_teleporter")
+    # subnet_genesis_with_teleporter = plan.render_templates(
+    #     config={
+    #         "example-subnet-genesis-with-teleporter.json": struct(
+    #             template=subnet_genesis_with_teleporter_tmpl,
+    #             data={
+    #                 "NetworkId":
+    #             },
+    #         )
+    #     },
+    #     name="subnet-genesis-with-teleporter",
+    # )
 
     genesis_generator_code = plan.upload_files("./genesis-generator-code", name="genesis-generator-code")
 
@@ -53,7 +66,8 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
         recipe=ExecRecipe(
             command=[
                 "/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3}".format(GENESIS_GENERATOR_CODE_PATH, network_id, num_nodes, vmName)]
-        )
+        ),
+        description="Generating genesis for primary network with args network id '{0}', num_nodes '{1}', vm '{2}'".format(network_id, num_nodes, vmName),
     )
 
     for index in range(0, num_nodes):
@@ -61,7 +75,8 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
             service_name = BUILDER_SERVICE_NAME,
             recipe = ExecRecipe(
                 command = ["cp", "/tmp/node-config/config.json", "/tmp/data/node-{0}/config.json".format(index)]
-            )
+            ),
+            description="Creating config files for each node",
         )
 
     genesis_data = plan.store_service_files(
@@ -73,29 +88,3 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
     vm_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/data/vmId.txt")
 
     return genesis_data, vm_id
-
-def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id, chain_name):
-    plan.exec(
-        service_name = BUILDER_SERVICE_NAME,
-        recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "cd /tmp/subnet-creator-code && go run main.go {0} {1} {2} {3} {4}".format(uri, vm_id, chain_name, num_nodes, is_elastic)]
-        )
-    )
-
-    subnetId = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/subnetId.txt")
-    chainId = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/chainId.txt")
-    allocations = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/allocations.txt")
-    genesisChainId = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/genesisChainId.txt")
-
-    assetId, transformationId, exportId, importId = None, None, None, None
-    if is_elastic:
-        assetId = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/assetId.txt")
-        transformationId = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/transformationId.txt")
-        exportId = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/exportId.txt")
-        importId = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/importId.txt")
-
-    validatorIds = []
-    for index in range (0, num_nodes):
-        validatorIds.append(utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/node-{0}/validator_id.txt".format(index)))
-    
-    return subnetId, chainId, validatorIds, allocations, genesisChainId, assetId, transformationId, exportId, importId

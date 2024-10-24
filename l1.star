@@ -2,10 +2,10 @@ builder = import_module('./builder.star')
 utils = import_module('./utils.star')
 node_launcher = import_module('./node_launcher.star')
 
-def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_counter):
+def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_counter, chain_id):
     # TODO: support elastic l1 subnets
     # create subnet and blockchain for this l1
-    chain_info = create_subnet_and_blockchain_for_l1(plan, node_info[bootnode_name]["rpc-url"], num_nodes, False, vm_id, chain_name, l1_counter)
+    chain_info = create_subnet_and_blockchain_for_l1(plan, node_info[bootnode_name]["rpc-url"], num_nodes, False, vm_id, chain_name, l1_counter, chain_id)
     
     subnet_id = chain_info["SubnetId"]
 
@@ -25,12 +25,12 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
 
     return chain_name, chain_info
 
-def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id, chain_name, l1_counter):
+def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id, chain_name, l1_counter, chain_id):
     plan.exec(
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = builder.BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter, "create")]
+            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter, chain_id, "create")]
         )
     )
 
@@ -38,7 +38,7 @@ def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id,
         description="Adding validators for {0}".format(chain_name),
         service_name = builder.BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter, "addvalidators")]
+            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter, chain_id, "addvalidators")]
         )
     )
 

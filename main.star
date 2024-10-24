@@ -40,7 +40,7 @@ def run(plan, args):
     tx_pk = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
     l1_info = {}
     for idx, chain in enumerate(chain_configs):
-        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx)
+        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"])
         l1_info[chain_name] = chain_info
         
         # launch tx spammer for this chain

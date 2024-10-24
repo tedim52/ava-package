@@ -4,17 +4,17 @@
         {
             "name": "myblockchain",
             "vm": "subnetevm",
-            "network-id": "1337",
+            "network-id": 555555,
             "enable-teleporter": true
         },
         {
             "name": "mysecondblockchain",
             "vm": "subnetevm",
-            "network-id": "1337",
+            "network-id": 666666,
             "enable-teleporter": true
         }
     ],
-    "num-nodes": 2,
+    "num-nodes": 3,
     "node-cfg": {
         "network-id": "1337",
         "staking-enabled": false,

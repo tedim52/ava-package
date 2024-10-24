@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"os"
 	"strconv"
@@ -34,13 +36,14 @@ const (
 	numValidatorNodesIndex = 4
 	isElasticIndex         = 5
 	l1CounterIndex         = 6
-	operationIndex         = 7
+	chainIdIndex           = 7
+	operationIndex         = 8
 	minArgs                = 8
 	nonZeroExitCode        = 1
 	nodeIdPathFormat       = "/tmp/data/node-%d/node_id.txt"
 
 	// TODO: pass this in via a variable
-	subnetGenesisPath = "/tmp/subnet-genesis/example-subnet-genesis-with-teleporter.json"
+	subnetGenesisPath = "/tmp/subnet-genesis/example-subnet-genesis-with-teleporter.json.tmpl"
 
 	// validate from a minute after now
 	startTimeDelayFromNow = 10 * time.Minute
@@ -141,6 +144,12 @@ func main() {
 		fmt.Printf("An error occurred while converting l1Num arg to integer: %v\n", err)
 		os.Exit(nonZeroExitCode)
 	}
+	chainIdArg := os.Args[chainIdIndex]
+	chainId, err := strconv.Atoi(chainIdArg)
+	if err != nil {
+		fmt.Printf("An error occurred while converting chain id arg to integer: %v\n", err)
+		os.Exit(nonZeroExitCode)
+	}
 
 	operation := os.Args[operationIndex]
 
@@ -164,16 +173,23 @@ func main() {
 		vmID, err := ids.FromString(vmIDStr)
 		if err != nil {
 			fmt.Printf("an error occurred converting '%v' vm id string to ids.ID: %v", vmIDStr, err)
+			os.Exit(nonZeroExitCode)
 		}
 
-		chainId, hexChainId, allocations, genesisChainId, err := createBlockChain(w, subnetId, vmID, chainName)
+		genesisData, err := insertChainIdIntoSubnetGenesisTmpl(subnetGenesisPath, chainId)
+		if err != nil {
+			fmt.Printf("an error occurred converting subnet genesis tmpl into genesis data with chain id '%v':\n %v\n", chainId, err)
+			os.Exit(nonZeroExitCode)
+		}
+
+		blockchainId, hexChainId, allocations, genesisChainId, err := createBlockChain(w, subnetId, vmID, chainName, genesisData)
 		if err != nil {
 			fmt.Printf("an error occurred while creating chain: %v\n", err)
 			os.Exit(nonZeroExitCode)
 		}
-		fmt.Printf("chain created with id '%v' and vm id '%v'\n", chainId, vmID)
+		fmt.Printf("chain created with id '%v' and vm id '%v'\n", blockchainId, vmID)
 
-		err = writeCreateOutputs(subnetId, vmID, chainId, hexChainId, genesisChainId, allocations, l1Num)
+		err = writeCreateOutputs(subnetId, vmID, blockchainId, hexChainId, genesisChainId, allocations, l1Num)
 		if err != nil {
 			fmt.Printf("an error occurred while writing create outputs: %v\n", err)
 			os.Exit(nonZeroExitCode)
@@ -520,15 +536,11 @@ func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.I
 	return validatorIDs, nil
 }
 
-func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string) (ids.ID, string, map[string]string, string, error) {
+func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string, genesisData []byte) (ids.ID, string, map[string]string, string, error) {
 	ctx := context.Background()
-	genesisData, err := os.ReadFile(subnetGenesisPath)
-	if err != nil {
-		return ids.Empty, "", nil, "", err
-	}
 	var genesis Genesis
 	if err := json.Unmarshal(genesisData, &genesis); err != nil {
-		return ids.Empty, "", nil, "", fmt.Errorf("an error occured while unmarshalling genesis json: %v")
+		return ids.Empty, "", nil, "", fmt.Errorf("an error occured while unmarshalling genesis json: %v", genesisData)
 	}
 	allocations := map[string]string{}
 	for addr, allocation := range genesis.Alloc {
@@ -634,4 +646,23 @@ func printBalances(w *wallet) error {
 		fmt.Printf("wallet has %v of asset with id %v\n", numAssets, id)
 	}
 	return nil
+}
+
+func insertChainIdIntoSubnetGenesisTmpl(subnetGenesisFilePath string, chainId int) ([]byte, error) {
+
+	tmpl, err := template.ParseFiles(subnetGenesisFilePath)
+	if err != nil {
+		return nil, err
+	}
+	data := struct {
+		ChainId int
+	}{
+		ChainId: chainId,
+	}
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
