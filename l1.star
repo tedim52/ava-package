@@ -5,7 +5,9 @@ node_launcher = import_module('./node_launcher.star')
 def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_counter, chain_id):
     # TODO: support elastic l1 subnets
     # create subnet and blockchain for this l1
-    chain_info = create_subnet_and_blockchain_for_l1(plan, node_info[bootnode_name]["rpc-url"], num_nodes, False, vm_id, chain_name, l1_counter, chain_id)
+    node_rpc_uri = node_info[bootnode_name]["rpc-url"] 
+    public_node_rpc_uri = node_info[bootnode_name]["public-rpc-url"] 
+    chain_info = create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, num_nodes, False, vm_id, chain_name, l1_counter, chain_id)
     
     subnet_id = chain_info["SubnetId"]
 
@@ -25,7 +27,7 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
 
     return chain_name, chain_info
 
-def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id, chain_name, l1_counter, chain_id):
+def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_elastic, vm_id, chain_name, l1_counter, chain_id):
     plan.exec(
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = builder.BUILDER_SERVICE_NAME,
@@ -62,5 +64,6 @@ def create_subnet_and_blockchain_for_l1(plan, uri, num_nodes, is_elastic, vm_id,
         "Allocations": allocations,
         "ValidatorIds": validator_ids,
         "RPCEndpointBaseURL": "{0}/ext/bc/{1}/rpc".format(uri, blockchain_id),
+        "PublicRPCEndpointBaseURL": "{0}/ext/bc/{1}/rpc".format(public_uri, blockchain_id),
         "WSEndpointBaseURL": "ws://{0}/ext/bc/{1}/ws".format(http_trimmed_uri, blockchain_id),
     }

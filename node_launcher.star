@@ -9,6 +9,7 @@ ABS_PLUGIN_DIRPATH = "/avalanchego/build/plugins/"
 ABS_DATA_DIRPATH = "/tmp/data/"
 RPC_PORT_ID = "rpc"
 RPC_PORT_NUM = 9650
+PUBLIC_IP = "127.0.0.1"
 
 STAKING_PORT_NUM = 9651
 NODE_NAME_PREFIX = "node-"
@@ -112,6 +113,8 @@ def launch(
 
         node_info[node_name] = {
             "rpc-url": "http://{0}:{1}".format(node.ip_address, RPC_PORT_NUM),
+            "public-rpc-url": "http://{0}:{1}".format(PUBLIC_IP, RPC_PORT_NUM),
+
             "launch-command": launch_node_cmd,
         }
 

@@ -8,8 +8,8 @@ FUNDED_ADDRESS="0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC"
 TELEPORTER_REGISTRY_VERSION="v1.0.0"
 FOUNDRY_CONFIG_ARTIFACT_NAME="foundry-config"
 
-def deploy_teleporter_registry(plan, chain_rpc_url):
-    deploy_registy_script = plan.upload_files(src="./deploy_registry.sh", name="deploy-registry-script")
+def deploy_teleporter_registry(plan, chain_rpc_url, chain_name):
+    deploy_registy_script = plan.upload_files(src="./deploy_registry.sh", name="deploy-registry-script-{0}".format(chain_name))
     deploy_result =plan.run_sh(
         description="Deploying Teleporter Registry contract to L1",
         name="teleporter-registry-deployer",

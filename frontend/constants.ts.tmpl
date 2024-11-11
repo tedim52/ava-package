@@ -1,0 +1,34 @@
+{{- range .Chains }}
+import { {{ . }} } from "../chains/definitions/{{ . }}";
+{{- end }}
+
+export const CHAINS = [{{- range $index, $chain := .Chains }}{{if $index}}, {{end}}{{ $chain }}{{- end }}];
+
+export const TOKENS = [
+    {{- range $index, $token := .Tokens }}
+    {{if $index}},{{end}}{
+        address: "{{ $token.address }}",
+        name: "{{ $token.name }}",
+        symbol: "{{ $token.name }}",
+        decimals: 18,
+        chain_id: {{ $token.chain_id }},
+        supports_ictt: true,
+        {{- if $token.transferer }}
+        transferer: "{{ $token.transferer }}",
+        {{- end }}
+        mirrors: [
+            {{- range $mirrorIndex, $mirror := $token.mirrors }}
+            {{if $mirrorIndex}},{{end}}{
+                {{- if $mirror.home }}
+                home: {{ $mirror.home }},
+                {{- end }}
+                address: "{{ $mirror.address }}",
+                transferer: "{{ $mirror.transferer }}",
+                chain_id: {{ $mirror.chain_id }},
+                decimals: 18
+            }
+            {{- end }}
+        ]
+    }
+    {{- end }}
+];

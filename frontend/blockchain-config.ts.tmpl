@@ -1,0 +1,19 @@
+import { defineChain } from "viem";
+
+export const {{ .BLOCKCHAIN_NAME }} = defineChain({
+    id: {{ .NETWORK_ID }},
+    name: '{{ .BLOCKCHAIN_NAME }}',
+    network: '{{ .NETWORK_NAME }}',
+    nativeCurrency: {
+        decimals: 18,
+        name: 'ETH',
+        symbol: 'ETH',
+    },
+    rpcUrls: {
+        default: {
+            http: ['{{ .RPC_URL }}']
+        },
+    },
+    iconUrl: "/chains/logo/173750.png",
+    icm_registry: "{{ .TELEPORTER_REGISTRY_ADDRESS }}"
+});
