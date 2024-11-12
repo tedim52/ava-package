@@ -91,7 +91,7 @@ def get_bridge_config_info(plan, l1_info, chain_config):
             continue
         
         source_chain_name = chain["name"]
-        src_chain_id = l1_info[source_chain_name]["NetworkdId"]
+        src_chain_id = l1_info[source_chain_name]["NetworkId"]
         token_address = l1_info[source_chain_name]["ERC20TokenAddress"]
         token_home_address = l1_info[source_chain_name]["TokenHomeAddress"] 
         source_chain_token_cfg = {
