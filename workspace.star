@@ -1,4 +1,5 @@
-frontend = import_module("./frontend/bridge-frontend.star")
+# frontend = import_module("./frontend/bridge-frontend.star")
+frontend = import_module("./frontend/bridge-frontend-dev.star")
 
 def run(plan, args):
     l1_info = {
