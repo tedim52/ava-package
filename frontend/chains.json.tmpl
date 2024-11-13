@@ -1,0 +1,28 @@
+{
+{{- $length := len .Blockchains }}
+{{- $isFirst := true }}
+{{- range $index, $config := .Blockchains }}
+{{if $isFirst}}
+    {{$isFirst = false}}
+{{else}}
+    ,
+{{end}}
+  "{{ $config.BLOCKCHAIN_NAME }}": {
+    "id": {{ $config.NETWORK_ID }},
+    "name": "{{ $config.BLOCKCHAIN_NAME }}",
+    "network": "{{ $config.BLOCKCHAIN_NAME }}",
+    "nativeCurrency": {
+      "decimals": 18,
+      "name": "ETH",
+      "symbol": "ETH"
+    },
+    "rpcUrls": {
+      "default": {
+        "http": ["{{ $config.RPC_URL }}"]
+      }
+    },
+    "iconUrl": "/chains/logo/173750.png",
+    "icm_registry": "{{ $config.TELEPORTER_REGISTRY_ADDRESS }}"
+  }
+{{- end }}
+}

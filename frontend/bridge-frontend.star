@@ -1,49 +1,39 @@
 WEB_APPS_IMAGE = "tedim52/avalanche-web-apps:latest"
 
 def launch_bridge_frontend(plan, l1_info, chain_config):
-    # parameterize chain definition file for each chain
-    chain_cfg_artifacts = []
-    chain_cfg_tmpl = read_file(src="./blockchain-config.ts.tmpl")
-    for chain_name, chain_info in l1_info.items():
-        chain_cfg_artifact = plan.render_templates(
+    src_blockchain_id, dest_blockchain_id, token_address, chain_cfgs, token_cfgs = get_bridge_config_info(plan, l1_info, chain_config)
+
+    chain_cfg_tmpl = read_file(src="./chains.json.tmpl")
+    chain_cfg_artifact = plan.render_templates(
             config={
-                "{0}.ts".format(chain_name): struct(
+                "chains.json": struct(
                     template=chain_cfg_tmpl,
                     data={
-                        "NETWORK_ID": chain_info["NetworkId"],
-                        "BLOCKCHAIN_NAME": chain_name,
-                        "NETWORK_NAME": chain_name,
-                        "RPC_URL": chain_info["PublicRPCEndpointBaseURL"],
-                        "TELEPORTER_REGISTRY_ADDRESS": chain_info["TeleporterRegistryAddress"],
-                    },
+                        "Blockchains": chain_cfgs,
+                    }
                 )
             },
-            name="{0}-bridge-config-artifact".format(chain_name)
-        )
-        chain_cfg_artifacts.append(chain_cfg_artifact)
+            name="bridge-chain-config-artifact",
+    )
 
-    src_blockchain_id, dest_blockchain_id, token_address, token_cfgs = get_bridge_config_info(plan, l1_info, chain_config)
-
-    # parameterize constants file with token configs
-    constants_tmpl = read_file(src="./constants.ts.tmpl")
-    constants_artifact = plan.render_templates(
+    tokens_tmpl = read_file(src="./tokens.json.tmpl")
+    tokens_artifact = plan.render_templates(
         config={
-            "constants.ts": struct(
-                template=constants_tmpl,
+            "tokens.json": struct(
+                template=tokens_tmpl,
                 data={
-                    "Chains": get_chain_list(plan, l1_info), # assume only two chains in the bridge right now
                     "Tokens": token_cfgs,
                 }
             )
         },
-        name="bridge-constants-artifact"
+        name="bridge-tokens-artifact"
     )
     
     # parameterize ictt page 
-    page_tmpl = read_file(src="./page.tsx.tmpl")
+    page_tmpl = read_file(src="./page-config.json.tmpl")
     page_artifact = plan.render_templates(
         config={
-            "page.tsx": struct(
+            "page-config.json": struct(
                 template=page_tmpl,
                 data={
                     "TOKEN_ADDRESS": token_address,
@@ -60,11 +50,8 @@ def launch_bridge_frontend(plan, l1_info, chain_config):
         config=ServiceConfig(
             image=WEB_APPS_IMAGE,
             files={
-                "/app/src/app/chains/definitions": Directory(
-                    artifact_names=chain_cfg_artifacts,
-                ),
-                "/app/src/app/ictt/": Directory(
-                    artifact_names=[page_artifact,constants_artifact]
+                "/data/": Directory(
+                    artifact_names=[chain_cfg_artifact, page_artifact, tokens_artifact],
                 ),
             },
             ports={
@@ -77,20 +64,25 @@ def launch_bridge_frontend(plan, l1_info, chain_config):
         ),
     )
 
-def get_chain_list(plan, l1_info): 
-    return l1_info.keys()
-
 def get_bridge_config_info(plan, l1_info, chain_config):
+    chain_cfgs = []
     token_cfgs = []
     src_chain_id = ""
     dest_chain_id = ""
     token_address = ""
 
     for chain in chain_config:
+        source_chain_name = chain["name"]
+        chain_cfgs.append({
+            "NETWORK_ID": l1_info[source_chain_name]["NetworkId"],
+            "BLOCKCHAIN_NAME": source_chain_name,
+            "NETWORK_NAME": source_chain_name,
+            "RPC_URL": l1_info[source_chain_name]["PublicRPCEndpointBaseURL"],
+            "TELEPORTER_REGISTRY_ADDRESS": l1_info[source_chain_name]["TeleporterRegistryAddress"],
+        })
         if "erc20-bridge-config" not in chain:
             continue
         
-        source_chain_name = chain["name"]
         src_chain_id = l1_info[source_chain_name]["NetworkId"]
         token_address = l1_info[source_chain_name]["ERC20TokenAddress"]
         token_home_address = l1_info[source_chain_name]["TokenHomeAddress"] 
@@ -130,7 +122,7 @@ def get_bridge_config_info(plan, l1_info, chain_config):
             })
         token_cfgs.append(source_chain_token_cfg)
 
-    return src_chain_id, dest_chain_id, token_address, token_cfgs
+    return src_chain_id, dest_chain_id, token_address, chain_cfgs, token_cfgs
 
 
 

@@ -1,0 +1,26 @@
+[
+{{- range $index, $token := .Tokens }}
+{{if $index}},{{end}}{
+    "address": "{{ $token.address }}",
+    "name": "{{ $token.name }}",
+    "symbol": "{{ $token.symbol }}",
+    "decimals": 18,
+    "chain_id": {{ $token.chain_id }},
+    "supports_ictt": true,
+    "transferer": "{{ $token.transferer }}",
+    "mirrors": [
+        {{- range $mirrorIndex, $mirror := $token.mirrors }}
+        {{if $mirrorIndex}},{{end}}{
+            {{- if $mirror.home }}
+            "home": {{ $mirror.home }},
+            {{- end }}
+            "address": "{{ $mirror.address }}",
+            "transferer": "{{ $mirror.transferer }}",
+            "chain_id": {{ $mirror.chain_id }},
+            "decimals": 18
+        }
+        {{- end }}
+    ]
+  }
+{{- end }}
+]
