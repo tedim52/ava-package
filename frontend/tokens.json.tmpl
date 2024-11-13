@@ -7,7 +7,12 @@
     "decimals": 18,
     "chain_id": {{ $token.chain_id }},
     "supports_ictt": true,
+    {{- if $token.transferer }}
     "transferer": "{{ $token.transferer }}",
+    {{- end }}
+    {{- if $token.is_transferer }}
+    "is_transferer": {{ $token.is_transferer }},
+    {{- end }}
     "mirrors": [
         {{- range $mirrorIndex, $mirror := $token.mirrors }}
         {{if $mirrorIndex}},{{end}}{

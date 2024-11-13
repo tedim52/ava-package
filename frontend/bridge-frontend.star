@@ -50,7 +50,7 @@ def launch_bridge_frontend(plan, l1_info, chain_config):
         config=ServiceConfig(
             image=WEB_APPS_IMAGE,
             files={
-                "/data/": Directory(
+                "/app/data/": Directory(
                     artifact_names=[chain_cfg_artifact, page_artifact, tokens_artifact],
                 ),
             },
