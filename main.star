@@ -9,7 +9,7 @@ bridge_frontend = import_module("./frontend/bridge-frontend.star")
 # additional services
 observability = import_module('./observability/observability.star')
 tx_spammer = import_module('./tx_spammer.star')
-block_explorer = import_module('./blockexplorer/block-explorer.star')
+block_explorer = import_module('./block-explorer/block-explorer.star')
 faucet = import_module('./faucet.star')
 
 AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
