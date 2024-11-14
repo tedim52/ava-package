@@ -3,13 +3,13 @@ utils = import_module("./utils.star")
 node_launcher = import_module("./node_launcher.star")
 l1 = import_module("./l1.star")
 relayer = import_module("./relayer/relayer.star")
-contract_deployer = import_module("./contract-deployment/contract_deployer.star")
+contract_deployer = import_module("./contract-deployment/contract-deployer.star")
 bridge_frontend = import_module("./frontend/bridge-frontend.star")
 
 # additional services
 observability = import_module('./observability/observability.star')
 tx_spammer = import_module('./tx_spammer.star')
-blockscout = import_module('./blockscout/blockscout.star')
+block_explorer = import_module('./blockexplorer/block-explorer.star')
 faucet = import_module('./faucet.star')
 
 AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
