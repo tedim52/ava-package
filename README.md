@@ -1,4 +1,4 @@
-My Package
+🔺 Avalanche Package
 ============
 This is a [Kurtosis](https://github.com/kurtosis-tech/kurtosis/) package for spinning up a local configurable Avalanche network. 
 
@@ -19,12 +19,12 @@ To remove the created [enclave][enclaves-reference], run `kurtosis enclave rm av
 
 You can configure this package using the JSON structure below. The default values for each parameter are shown.
 
-NOTE: the `//` lines are not valid JSON; you will need to remove them!
+// NOTE and TODO: this is the default json
 
-<!-- TODO Parameterize your package as you prefer; see https://docs.kurtosis.com/next/concepts-reference/args for more -->
 ```javascript
 {
     "base-network-id": "1337",
+    // add more dicts to spin up more L1s
     "chain-configs": [
         {
             "name": "myblockchain",
