@@ -82,7 +82,7 @@ def run(plan, args):
     # start prom and grafana
     observability.launch_observability(plan, node_info)
     
-    # bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
+    bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
 
     # additional services:
 
