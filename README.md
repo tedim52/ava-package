@@ -19,7 +19,7 @@ To remove the created [enclave][enclaves-reference], run `kurtosis enclave rm av
 
 You can configure this package using the JSON structure below. The default values for each parameter are shown.
 
-// NOTE and TODO: this is the default json
+// NOTE and TODO: flesh out the configurable params and document available option
 
 ```javascript
 {
