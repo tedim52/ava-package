@@ -1,0 +1,79 @@
+
+
+def launch_faucet(plan, chain_info, funded_private_key):
+    evm_chain_info, erc_20_tokens = get_faucet_cfg_info(chain_info)
+
+    config_file_tmpl = read_file(src="./config.json.tmpl")
+    config_file_artifact = plan.render_templates(
+        config={
+            "config.json": struct(
+                template=config_file_tmpl,
+                data={
+                    "EVMChains": evm_chain_info,
+                    "ERC20Tokens": erc_20_tokens,
+                }
+            )
+        },
+        name="faucet-config-file"
+    )
+
+    plan.add_service(
+        name="faucet",
+        config=ServiceConfig(
+            cmd=["/bin/sh", "-c", "sleep 1000000s"],
+            image="tedim52/avalanche-faucet:latest",
+            files={
+                "/avalanche-faucet/config/": config_file_artifact,
+            },
+            env_vars={
+                "PK": funded_private_key,
+                "CAPTCHA_SECRET": "Google ReCaptcha V3 Secret"
+            },
+            ports={
+                "faucet": PortSpec(
+                    number=8000,
+                    application_protocol="HTTP",
+                    transport_protocol="TCP",
+                )
+            },
+            public_ports={
+                "faucet": PortSpec(
+                    number=8000,
+                    application_protocol="HTTP",
+                    transport_protocol="TCP",
+                )
+            }
+            # ready_conditions=ReadyCondition(
+            #     recipe = GetHttpRequestRecipe(
+            #         port_id = "faucet",
+            #         endpoint = "/health",
+            #         extract = {
+            #             "exploded-slash": ".query.input | split(\"/\") | .[1]"
+            #         }
+            #     ),
+            #     field = "",
+            #     assertion = "==",
+            #     target_value = 200,
+            #     interval = "10s",
+            #     timeout = "200s",
+            # )
+        )
+    )
+
+def get_faucet_cfg_info(chain_info):
+    evm_chains =[]
+    erc_20_tokens = []
+
+    for chain_name, chain in chain_info.items():
+        evm_chains.append({
+            "Name": chain_name,
+            "RPCUrl": chain["PublicRPCEndpointBaseURL"],
+            "ChainID": chain["NetworkId"],
+        })
+        if "ERC20TokenAddress" in chain:
+            erc_20_tokens.append({
+                "ID": "{0}{1}".format("TOK", chain_name),
+                "HostID": chain_name,
+                "CONTRACTADDRESS": chain["ERC20TokenAddress"],
+            })
+    return evm_chains, erc_20_tokens

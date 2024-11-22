@@ -5,11 +5,7 @@
             "name": "myblockchain",
             "vm": "subnetevm",
             "network-id": 555555,
-            "enable-teleporter": true,
-            "erc20-bridge-config": {
-                "token-name": "MYB",
-                "destinations": ["mysecondblockchain"]
-            }
+            "enable-teleporter": true
         }
     ],
     "num-nodes": 3,

@@ -80,7 +80,7 @@ def run(
     prometheus_service = plan.add_service(
         name=name,
         config=ServiceConfig(
-            image="prom/prometheus:latest",
+            image="prom/prometheus:v2.47.0",
             ports={
                 "http": PortSpec(
                     number=9090,
@@ -100,6 +100,7 @@ def run(
                 "--web.console.libraries=/etc/prometheus/console_libraries",
                 "--web.console.templates=/etc/prometheus/consoles",
                 "--web.enable-lifecycle",
+                "--log.level=debug",
             ],
             min_cpu=min_cpu,
             max_cpu=max_cpu,

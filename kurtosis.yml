@@ -2,3 +2,4 @@ name: "github.com/tedim52/avalabs-package"
 
 replace:
   github.com/kurtosis-tech/grafana-package: /grafana-package
+  github.com/kurtosis-tech/prometheus-package: /prometheus-package

@@ -1,0 +1,75 @@
+{
+    "GLOBAL_RL": {
+        "ID": "GLOBAL",
+        "RATELIMIT": {
+            "REVERSE_PROXIES": 2,
+            "MAX_LIMIT": 40,
+            "WINDOW_SIZE": 1,
+            "PATH": "/",
+            "SKIP_FAILED_REQUESTS": false
+        }
+    },
+    "NATIVE_CLIENT": false,
+    "DEBUG": true,
+    "couponConfig": {
+        "IS_ENABLED": true,
+        "MAX_LIMIT_CAP": 5000
+    },
+    "MAINNET_BALANCE_CHECK_RPC": "https://api.avax.network/ext/C/rpc",
+    "MAINNET_BALANCE_CHECK_CHAIN_ID": 43114,
+    "evmchains": [
+        {{- $isFirst := true }}
+        {{- range $index, $chain := .EVMChains }}
+        {{if $isFirst}}
+            {{$isFirst = false}}
+        {{else}}
+        ,
+        {{end}}
+        {
+            "ID": "{{ $chain.Name }}",
+            "NAME": "{{ $chain.Name }}",
+            "TOKEN": "TOK",
+            "RPC": "{{ $chain.RPCUrl }}",
+            "CHAINID": {{ $chain.ChainID }},
+            "EXPLORER": "",
+            "IMAGE": "",
+            "MAX_PRIORITY_FEE": "10000000000",
+            "MAX_FEE": "100000000000",
+            "DRIP_AMOUNT": 2,
+            "DECIMALS": 18,
+            "RECALIBRATE": 30,
+            "COUPON_REQUIRED": true,
+            "MAINNET_BALANCE_CHECK_ENABLED": true,
+            "RATELIMIT": {
+                "MAX_LIMIT": 1,
+                "WINDOW_SIZE": 1440
+            }
+        }
+        {{- end }}
+    ],
+    "erc20tokens": [
+        {{- $isFirst := true }}
+        {{- range $index, $token := .ERC20Tokens }}
+        {{if $isFirst}}
+            {{$isFirst = false}}
+        {{else}}
+        ,
+        {{end}}
+        {
+            "ID": "TOK",
+            "HOSTID": "{{ $token.HostID }}",
+            "NAME": "TOKEN (AVA TEST)",
+            "TOKEN": "TOK",
+            "IMAGE": "",
+            "CONTRACTADDRESS": "{{ $token.ERC20ContractAddress }}",
+            "DRIP_AMOUNT": 1,
+            "GASLIMIT": "100000",
+            "DECIMALS": 6,
+            "RATELIMIT": {
+                "MAX_LIMIT": 1,
+                "WINDOW_SIZE": 1440
+            }
+        }
+        {{- end }}
+    ]
+}
