@@ -9,10 +9,10 @@
             "SKIP_FAILED_REQUESTS": false
         }
     },
-    "NATIVE_CLIENT": false,
+    "NATIVE_CLIENT": true,
     "DEBUG": true,
     "couponConfig": {
-        "IS_ENABLED": true,
+        "IS_ENABLED": false,
         "MAX_LIMIT_CAP": 5000
     },
     "MAINNET_BALANCE_CHECK_RPC": "https://api.avax.network/ext/C/rpc",
@@ -38,10 +38,10 @@
             "DRIP_AMOUNT": 2,
             "DECIMALS": 18,
             "RECALIBRATE": 30,
-            "COUPON_REQUIRED": true,
-            "MAINNET_BALANCE_CHECK_ENABLED": true,
+            "COUPON_REQUIRED": false,
+            "MAINNET_BALANCE_CHECK_ENABLED": false,
             "RATELIMIT": {
-                "MAX_LIMIT": 1,
+                "MAX_LIMIT": 5,
                 "WINDOW_SIZE": 1440
             }
         }
@@ -62,11 +62,11 @@
             "TOKEN": "TOK",
             "IMAGE": "",
             "CONTRACTADDRESS": "{{ $token.ERC20ContractAddress }}",
-            "DRIP_AMOUNT": 1,
+            "DRIP_AMOUNT": 2,
             "GASLIMIT": "100000",
             "DECIMALS": 6,
             "RATELIMIT": {
-                "MAX_LIMIT": 1,
+                "MAX_LIMIT": 5,
                 "WINDOW_SIZE": 1440
             }
         }
