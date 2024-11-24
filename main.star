@@ -8,9 +8,9 @@ bridge_frontend = import_module("./frontend/bridge-frontend.star")
 
 # additional services
 observability = import_module('./observability/observability.star')
+faucet = import_module('./faucet/faucet.star')
 tx_spammer = import_module('./tx_spammer.star')
 block_explorer = import_module('./block-explorer/block-explorer.star')
-faucet = import_module('./faucet/faucet.star')
 
 AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
 SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.10/subnet-evm_0.6.10_linux_arm64.tar.gz"
@@ -88,7 +88,8 @@ def run(plan, args):
         # launch tx spammer for this chain
         tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], PK, chain_name)
 
-    # TODO: start blockscout explorer
+        # launch block explorer for this chain
+        block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"])
 
     return l1_info
    
