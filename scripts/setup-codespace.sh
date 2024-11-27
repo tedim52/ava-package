@@ -1,6 +1,21 @@
 #!/bin/bash
 
 set -euo pipefail
+VERBOSE=false 
+log() {
+    echo "$1"
+}
+
+log_verbose() {
+    if $VERBOSE; then
+        echo "$1"
+    fi
+}
+
+log_error() {
+    echo "❌ Error: $1" >&2
+    exit 1
+}
 
 spinner() {
     local pid=$1
@@ -38,29 +53,12 @@ setup_docker() {
 
 setup_kurtosis() {
 	log "🦢 Setting up Kurtosis..."
-    while ! run_command_with_spinner "echo \"deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /\" | tee /etc/apt/sources.list.d/kurtosis.list"; do
-		sleep 1
-	done
-    while ! run_command_with_spinner "apt update && apt install kurtosis-cli && kurtosis engine start"; do
-		sleep 1
-	done
+    sudo echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | sudo tee /etc/apt/sources.list.d/kurtosis.list
+    sudo apt update
+    sudo apt install kurtosis-cli
+    sudo kurtosis engine start
 	log_verbose "Kurtosis is running."
 	sleep 3
-}
-
-log() {
-    echo "$1"
-}
-
-log_verbose() {
-    if $VERBOSE; then
-        echo "$1"
-    fi
-}
-
-log_error() {
-    echo "❌ Error: $1" >&2
-    exit 1
 }
 
 main() {
