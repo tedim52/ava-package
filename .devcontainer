@@ -1,0 +1,21 @@
+{
+    "postStartCommand": "echo 'Welcome to the Avalanche Package!'",
+    "portsAttributes": {
+        "8080": {
+            "label": "frontend"
+        }
+    },
+    "customizations": {
+        // Configure properties specific to VS Code.
+        "vscode": {
+            "extensions": [
+                "ms-go.vscode-go"
+            ],
+            "settings": {
+                "go.toolsEnvVars": {
+                    "GO111MODULE": "on"
+                }
+            }
+        }
+    }
+}
