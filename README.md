@@ -7,7 +7,7 @@ Run this package
 If you have [Kurtosis installed][install-kurtosis], clone this repo locally and run:
 
 ```bash
-kurtosis run . --enclave avalanche --args-file default-args.json
+kurtosis run . --enclave avalanche --args-file args.json
 ```
 
 To remove the created [enclave][enclaves-reference], run `kurtosis enclave rm avalanche -f`.
