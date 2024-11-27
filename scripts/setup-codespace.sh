@@ -48,6 +48,21 @@ setup_kurtosis() {
 	sleep 3
 }
 
+log() {
+    echo "$1"
+}
+
+log_verbose() {
+    if $VERBOSE; then
+        echo "$1"
+    fi
+}
+
+log_error() {
+    echo "❌ Error: $1" >&2
+    exit 1
+}
+
 main() {
 	# Check if an argument is provided
 	if [ $# -gt 0 ] && [ "$1" = "--verbose" ]; then
