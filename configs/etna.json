@@ -10,7 +10,8 @@
             "name": "myblockchain",
             "vm": "subnetevm",
             "network-id": 555555,
-            "enable-teleporter": true
+            "enable-teleporter": true,
+            "etna": true
         }
     ]
 }

@@ -1,5 +1,4 @@
 {
-    "base-network-id": "1337",
     "chain-configs": [
         {
             "name": "myblockchain",
@@ -22,6 +21,7 @@
     "node-cfg": {
         "network-id": "1337",
         "staking-enabled": false,
-        "health-check-frequency": "5s"
+        "health-check-frequency": "5s",
+        "etna": true
     }
 }

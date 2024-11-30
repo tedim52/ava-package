@@ -7,12 +7,24 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math/big"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ava-labs/avalanche-cli/pkg/validatormanager"
+	"github.com/ava-labs/avalanche-cli/pkg/vm"
+	blockchainSDK "github.com/ava-labs/avalanche-cli/sdk/blockchain"
+	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/ava-labs/avalanchego/wallet/chain/c"
+	"github.com/ava-labs/coreth/plugin/evm"
+	"github.com/ava-labs/coreth/utils"
+	"github.com/ava-labs/subnet-evm/commontype"
+	"github.com/ava-labs/subnet-evm/core/types"
+	"github.com/ava-labs/subnet-evm/params"
+	"github.com/ava-labs/subnet-evm/precompile/contracts/warp"
+	"github.com/ava-labs/subnet-evm/precompile/precompileconfig"
 
 	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/ava-labs/avalanchego/ids"
@@ -23,7 +35,6 @@ import (
 	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 	"github.com/ava-labs/avalanchego/vms/platformvm/txs"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
-	pchainwallet "github.com/ava-labs/avalanchego/wallet/chain/p/wallet"
 	"github.com/ava-labs/avalanchego/wallet/chain/x"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
@@ -34,7 +45,7 @@ const (
 	vmIDArgIndex           = 2
 	chainNameIndex         = 3
 	numValidatorNodesIndex = 4
-	isElasticIndex         = 5
+	isEtnaSubnetIndex      = 5
 	l1CounterIndex         = 6
 	chainIdIndex           = 7
 	operationIndex         = 8
@@ -93,7 +104,7 @@ const (
 )
 
 type wallet struct {
-	p pchainwallet.Wallet
+	p primary.Wallet
 	x x.Wallet
 	c c.Wallet
 }
@@ -112,7 +123,8 @@ type Balance struct {
 }
 
 var (
-	defaultPoll = common.WithPollFrequency(500 * time.Millisecond)
+	defaultPoll            = common.WithPollFrequency(500 * time.Millisecond)
+	defaultPoAOwnerBalance = new(big.Int).Mul(vm.OneAvax, big.NewInt(100))
 )
 
 // It's usage from builder.star is like this
@@ -133,10 +145,10 @@ func main() {
 		fmt.Printf("An error occurred while converting numValidatorNodes arg to integer: %v\n", err)
 		os.Exit(nonZeroExitCode)
 	}
-	isElasticArg := os.Args[isElasticIndex]
-	isElastic, err := strconv.ParseBool(isElasticArg)
+	isEtnaSubnetArg := os.Args[isEtnaSubnetIndex]
+	isEtnaSubnet, err := strconv.ParseBool(isEtnaSubnetArg)
 	if err != nil {
-		fmt.Printf("an error occurred converting is elastic '%v' to bool", isElastic)
+		fmt.Printf("an error occurred converting is etna subnet '%v' to bool", isEtnaSubnet)
 	}
 	l1NumArg := os.Args[l1CounterIndex]
 	l1Num, err := strconv.Atoi(l1NumArg)
@@ -176,10 +188,19 @@ func main() {
 			os.Exit(nonZeroExitCode)
 		}
 
-		genesisData, err := insertChainIdIntoSubnetGenesisTmpl(subnetGenesisPath, chainId)
-		if err != nil {
-			fmt.Printf("an error occurred converting subnet genesis tmpl into genesis data with chain id '%v':\n %v\n", chainId, err)
-			os.Exit(nonZeroExitCode)
+		var genesisData []byte
+		if isEtnaSubnet {
+			genesisData, err = getEtnaGenesisBytes(genesis.EWOQKey, chainId, chainName)
+			if err != nil {
+				fmt.Printf("an error occurred getting etna subnet genesis data with chain id '%v':\n %v\n", chainId, err)
+				os.Exit(nonZeroExitCode)
+			}
+		} else {
+			genesisData, err = insertChainIdIntoSubnetGenesisTmpl(subnetGenesisPath, chainId)
+			if err != nil {
+				fmt.Printf("an error occurred converting subnet genesis tmpl into genesis data with chain id '%v':\n %v\n", chainId, err)
+				os.Exit(nonZeroExitCode)
+			}
 		}
 
 		blockchainId, hexChainId, allocations, genesisChainId, err := createBlockChain(w, subnetId, vmID, chainName, genesisData)
@@ -326,9 +347,6 @@ func writeOutputs(subnetId ids.ID, chainId ids.ID, validatorIds []ids.ID, alloca
 	if err := os.MkdirAll(fmt.Sprintf(subnetIdParentPath, subnetId.String()), 0700); err != nil {
 		return err
 	}
-	// if err := os.WriteFile(fmt.Sprintf(chainIdOutput, subnetId.String()), []byte(chainId.String()), perms.ReadOnly); err != nil {
-	// 	return err
-	// }
 	if err := os.WriteFile(fmt.Sprintf(genesisChainIdOutput, subnetId.String()), []byte(genesisChainId), perms.ReadOnly); err != nil {
 		return err
 	}
@@ -377,7 +395,7 @@ func addPermissionlessValidator(w *wallet, assetId ids.ID, subnetId ids.ID, numV
 		}
 		startTime := time.Now().Add(startTimeDelayFromNow)
 		endTime := startTime.Add(endTimeFromStartTime)
-		validatorTx, err := w.p.IssueAddPermissionlessValidatorTx(
+		validatorTx, err := w.p.P().IssueAddPermissionlessValidatorTx(
 			&txs.SubnetValidator{
 				Validator: txs.Validator{
 					NodeID: nodeId,
@@ -405,7 +423,7 @@ func addPermissionlessValidator(w *wallet, assetId ids.ID, subnetId ids.ID, numV
 
 func transformSubnet(w *wallet, subnetId ids.ID, assetId ids.ID) (ids.ID, error) {
 	ctx := context.Background()
-	transformSubnetTx, err := w.p.IssueTransformSubnetTx(
+	transformSubnetTx, err := w.p.P().IssueTransformSubnetTx(
 		subnetId,
 		assetId,
 		uint64(defaultInitialSupply),
@@ -472,7 +490,7 @@ func createAssetOnXChainImportToPChain(w *wallet, name string, symbol string, de
 	if err != nil {
 		return ids.Empty, ids.Empty, ids.Empty, fmt.Errorf("an error occurred while issuing asset export: %v", err)
 	}
-	importTx, err := w.p.IssueImportTx(
+	importTx, err := w.p.P().IssueImportTx(
 		w.x.Builder().Context().BlockchainID,
 		owner,
 		common.WithContext(ctx),
@@ -485,10 +503,6 @@ func createAssetOnXChainImportToPChain(w *wallet, name string, symbol string, de
 
 func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.ID, error) {
 	ctx := context.Background()
-	// w, err := newWallet(uri)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("could not create new wallet for adding subnet validators: %v", err)
-	// }
 	var validatorIDs []ids.ID
 	for index := 0; index < numValidators; index++ {
 		nodeIdPath := fmt.Sprintf(nodeIdPathFormat, index)
@@ -504,9 +518,7 @@ func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.I
 		endTime := startTime.Add(endTimeFromStartTime)
 		var addValidatorTx *txs.Tx
 		var txErr error
-		// retryCount := 30
-		// for retryCount > 0 {
-		addValidatorTx, txErr = w.p.IssueAddSubnetValidatorTx(
+		addValidatorTx, txErr = w.p.P().IssueAddSubnetValidatorTx(
 			&txs.SubnetValidator{
 				Validator: txs.Validator{
 					NodeID: nodeId,
@@ -519,14 +531,6 @@ func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.I
 			common.WithContext(ctx),
 			defaultPoll,
 		)
-		// if txErr != nil {
-		// 	retryCount -= 1
-		// 	fmt.Printf("an error occurred issuing an add subnet validator tx, trying '%v' more times:\n %v\n", retryCount, txErr.Error())
-		// 	time.Sleep(30 * time.Second)
-		// } else {
-		// 	retryCount = 0
-		// }
-		// }
 		if txErr != nil {
 			return nil, fmt.Errorf("an error occurred while adding node '%v' as validator: %v", index, txErr)
 		}
@@ -537,7 +541,7 @@ func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.I
 }
 
 func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string, genesisData []byte) (ids.ID, string, map[string]string, string, error) {
-	ctx := context.Background()
+	// ctx := context.Background)
 	var genesis Genesis
 	if err := json.Unmarshal(genesisData, &genesis); err != nil {
 		return ids.Empty, "", nil, "", fmt.Errorf("an error occured while unmarshalling genesis json: %v", genesisData)
@@ -548,17 +552,17 @@ func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string,
 	}
 	genesisChainId := fmt.Sprintf("%d", genesis.Config.ChainId)
 	var nilFxIds []ids.ID
-	createChainTx, err := w.p.IssueCreateChainTx(
+	createChainTx, err := w.p.P().IssueCreateChainTx(
 		subnetId,
 		genesisData,
 		vmId,
 		nilFxIds,
 		chainName,
-		common.WithContext(ctx),
-		defaultPoll,
 	)
+	// common.WithContext(ctx),
+	// defaultPoll,
 	if err != nil {
-		return ids.Empty, "", nil, "", nil
+		return ids.Empty, "", nil, "", fmt.Errorf("an error occured while creating chain for subnet: %v", subnetId.String())
 	}
 	return createChainTx.ID(), createChainTx.TxID.Hex(), allocations, genesisChainId, nil
 }
@@ -566,7 +570,7 @@ func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string,
 func createSubnet(w *wallet) (ids.ID, error) {
 	ctx := context.Background()
 	addr := genesis.EWOQKey.PublicKey().Address()
-	createSubnetTx, err := w.p.IssueCreateSubnetTx(
+	createSubnetTx, err := w.p.P().IssueCreateSubnetTx(
 		&secp256k1fx.OutputOwners{
 			Threshold: 1,
 			Addrs:     []ids.ShortID{addr},
@@ -601,7 +605,7 @@ func newWalletWithSubnet(uri string, subnetId ids.ID) (*wallet, error) {
 	log.Printf("synced wallet in %s\n", time.Since(walletSyncStartTime))
 
 	return &wallet{
-		p: createdWallet.P(),
+		p: createdWallet,
 		x: createdWallet.X(),
 		c: createdWallet.C(),
 	}, nil
@@ -626,7 +630,7 @@ func newWallet(uri string) (*wallet, error) {
 	log.Printf("synced wallet in %s\n", time.Since(walletSyncStartTime))
 
 	return &wallet{
-		p: createdWallet.P(),
+		p: createdWallet,
 		x: createdWallet.X(),
 		c: createdWallet.C(),
 	}, nil
@@ -638,7 +642,7 @@ func printBalances(w *wallet) error {
 		return fmt.Errorf("could not get balance of wallet: %v", err)
 	}
 	fmt.Printf("cChain assets amount: %v\n", cChainAssets)
-	pChainAssets, err := w.p.Builder().GetBalance()
+	pChainAssets, err := w.p.P().Builder().GetBalance()
 	if err != nil {
 		return fmt.Errorf("could not get balance of wallet: %v", err)
 	}
@@ -649,7 +653,6 @@ func printBalances(w *wallet) error {
 }
 
 func insertChainIdIntoSubnetGenesisTmpl(subnetGenesisFilePath string, chainId int) ([]byte, error) {
-
 	tmpl, err := template.ParseFiles(subnetGenesisFilePath)
 	if err != nil {
 		return nil, err
@@ -665,4 +668,72 @@ func insertChainIdIntoSubnetGenesisTmpl(subnetGenesisFilePath string, chainId in
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func BytesToAddress(b []byte) [20]byte {
+	var a [20]byte
+	if len(b) > len(a) {
+		b = b[len(b)-20:]
+	}
+	copy(a[20-len(b):], b)
+	return a
+}
+
+func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName string) ([]byte, error) {
+	ethAddr := evm.PublicKeyToEthAddress(ownerKey.PublicKey())
+
+	feeConfig := commontype.FeeConfig{
+		GasLimit:                 big.NewInt(12000000),
+		TargetBlockRate:          2,
+		MinBaseFee:               big.NewInt(25000000000),
+		TargetGas:                big.NewInt(60000000),
+		BaseFeeChangeDenominator: big.NewInt(36),
+		MinBlockGasCost:          big.NewInt(0),
+		MaxBlockGasCost:          big.NewInt(1000000),
+		BlockGasCostStep:         big.NewInt(200000),
+	}
+
+	teleporter_deployer_address := BytesToAddress([]byte("0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC"))
+	allocation := types.GenesisAlloc{
+		// FIXME: This looks like a bug in the CLI, CLI allocates funds to a zero address here
+		// It is filled in here: https://github.com/ava-labs/avalanche-cli/blob/6debe4169dce2c64352d8c9d0d0acac49e573661/pkg/vm/evm_prompts.go#L178
+		ethAddr:                     types.Account{Balance: defaultPoAOwnerBalance},
+		teleporter_deployer_address: types.Account{Balance: defaultPoAOwnerBalance},
+	}
+	fmt.Print(allocation)
+
+	// add teleporter contracts
+	// teleporter.AddICMMessengerContractToAllocations(allocation)
+
+	// add contracts needed for etna upgrade
+	validatormanager.AddPoAValidatorManagerContractToAllocations(allocation)
+	validatormanager.AddTransparentProxyContractToAllocations(allocation, ethAddr.String()) //TODO: might need to be zero address
+
+	genesisTimestamp := utils.TimeToNewUint64(time.Now())
+
+	precompiles := params.Precompiles{}
+	precompiles[warp.ConfigKey] = &warp.Config{
+		QuorumNumerator:              warp.WarpDefaultQuorumNumerator,
+		RequirePrimaryNetworkSigners: true,
+		Upgrade: precompileconfig.Upgrade{
+			BlockTimestamp: genesisTimestamp,
+		},
+	}
+
+	subnetConfig, err := blockchainSDK.New(
+		&blockchainSDK.SubnetParams{
+			SubnetEVM: &blockchainSDK.SubnetEVMParams{
+				ChainID:     new(big.Int).SetUint64(uint64(chainID)),
+				FeeConfig:   feeConfig,
+				Allocation:  allocation,
+				Precompiles: precompiles,
+				Timestamp:   genesisTimestamp,
+			},
+			Name: subnetName,
+		})
+	if err != nil {
+		return []byte{}, fmt.Errorf("could not get balance of wallet: %v", err)
+	}
+
+	return subnetConfig.Genesis, nil
 }

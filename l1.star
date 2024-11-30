@@ -2,12 +2,12 @@ builder = import_module('./builder.star')
 utils = import_module('./utils.star')
 node_launcher = import_module('./node_launcher.star')
 
-def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_counter, chain_id):
+def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_counter, chain_id, isEtna):
     # TODO: support elastic l1 subnets
     # create subnet and blockchain for this l1
     node_rpc_uri = node_info[bootnode_name]["rpc-url"] 
     public_node_rpc_uri = node_info[bootnode_name]["public-rpc-url"] 
-    chain_info = create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, num_nodes, False, vm_id, chain_name, l1_counter, chain_id)
+    chain_info = create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, num_nodes, isEtna, vm_id, chain_name, l1_counter, chain_id)
     
     subnet_id = chain_info["SubnetId"]
 
@@ -27,22 +27,27 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
 
     return chain_name, chain_info
 
-def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_elastic, vm_id, chain_name, l1_counter, chain_id):
+def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
+    create_subnet_cmd ="cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")
+    plan.print(create_subnet_cmd)
     plan.exec(
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = builder.BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter, chain_id, "create")]
+            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")]
         )
     )
 
+    add_validators_cmd = "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")
+    plan.print(add_validators_cmd)
     plan.exec(
         description="Adding validators for {0}".format(chain_name),
         service_name = builder.BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_elastic, l1_counter, chain_id, "addvalidators")]
+            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")]
         )
     )
+
 
     subnet_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/subnetId.txt".format(l1_counter))
     blockchain_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/blockchainId.txt".format(subnet_id))

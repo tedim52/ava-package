@@ -47,7 +47,7 @@ def init(plan, node_cfg_map):
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
         config=ServiceConfig(
-            image = "golang:1.22.2",
+            image = "golang:1.22.8",
             entrypoint=["sleep", "99999"],
             files={
                 GENESIS_GENERATOR_CODE_PATH: genesis_generator_code,
