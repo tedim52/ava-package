@@ -14,7 +14,10 @@ block_explorer = import_module('./block-explorer/block-explorer.star')
 
 AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
 SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.10/subnet-evm_0.6.10_linux_arm64.tar.gz"
-# use a separate private key for faucet
+AMD64_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.10/subnet-evm_0.6.10_linux_amd64.tar.gz"
+ETNA_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.12/subnet-evm_0.6.12_linux_arm64.tar.gz"
+
+# TODO: Use a separate private key for faucet
 PK = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
 
 def run(plan, args):
@@ -22,6 +25,17 @@ def run(plan, args):
     networkd_id = args['base-network-id']
     num_nodes = args['num-nodes']
     chain_configs = args['chain-configs']
+
+    image = DEFAULT_AVALANCHEGO_IMAGE
+    subnet_evm_binary_url = SUBNET_EVM_BINARY_URL
+
+    cpu_arch_result = plan.run_sh(
+        description="Determining CPU system architecture",
+        run="uname -m | tr -d '\n'",
+    )
+    cpu_arch = cpu_arch_result.output
+    if cpu_arch == "arm64":
+       subnet_evm_binary_url = AMD64_SUBNET_EVM_BINARY_URL
 
     # create builder, responsible for scripts to generate genesis, create subnets, create blockchains
     builder.init(plan, node_cfg)
