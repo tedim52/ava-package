@@ -26,7 +26,7 @@ def run(plan, args):
     num_nodes = args['num-nodes']
     chain_configs = args['chain-configs']
 
-    image = DEFAULT_AVALANCHEGO_IMAGE
+    image = AVALANCHEGO_IMAGE
     subnet_evm_binary_url = SUBNET_EVM_BINARY_URL
 
     cpu_arch_result = plan.run_sh(
