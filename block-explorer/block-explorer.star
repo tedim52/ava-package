@@ -1,5 +1,5 @@
 postgres = import_module("github.com/kurtosis-tech/postgres-package/main.star")
-blockscout = import_module("github.com/tedim52/kurtosis-blockscout/main.star")
+# blockscout = import_module("github.com/tedim52/kurtosis-blockscout/main.star")
 
 def launch_blockscout(
     plan,
