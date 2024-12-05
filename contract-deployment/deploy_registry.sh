@@ -94,13 +94,13 @@ constructor_encoding=${constructor_encoding:2}
 
 # # Deploy the TeleporterRegistry contract 
 deployment_result=$(cast send --private-key $user_private_key --rpc-url $rpc_url --json --create $teleporter_registry_bytecode$constructor_encoding)
-# teleporter_registry_address=$(echo $deployment_result | jq -r .contractAddress)
-# deployment_status=$(echo $deployment_result | jq -r .status)
-# deployment_tx_id=$(echo $deployment_result | jq -r .transactionHash)
-# if [[ $deployment_status != "0x1" ]]; then 
-#     echo "TeleporterRegistry deployment transaction failed. Transaction ID: $deployment_tx_id"
-#     exit 1
-# fi
-# echo $teleporter_registry_address
+teleporter_registry_address=$(echo $deployment_result | jq -r .contractAddress)
+deployment_status=$(echo $deployment_result | jq -r .status)
+deployment_tx_id=$(echo $deployment_result | jq -r .transactionHash)
+if [[ $deployment_status != "0x1" ]]; then 
+    echo "TeleporterRegistry deployment transaction failed. Transaction ID: $deployment_tx_id"
+    exit 1
+fi
+echo $teleporter_registry_address
 
-# exit 0
+exit 0

@@ -9,7 +9,7 @@ TELEPORTER_REGISTRY_VERSION="v1.0.0"
 FOUNDRY_CONFIG_ARTIFACT_NAME="foundry-config"
 
 def deploy_teleporter_registry(plan, chain_rpc_url, chain_name):
-    deploy_registy_script = plan.upload_files(src="./deploy_registry.sh", name="deploy-registry-cript-{0}".format(chain_name))
+    deploy_registy_script = plan.upload_files(src="./deploy_registry.sh", name="deploy-registry-script-{0}".format(chain_name))
     deploy_result =plan.run_sh(
         description="Deploying Teleporter Registry contract to L1",
         name="teleporter-registry-deployer",

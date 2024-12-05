@@ -27,9 +27,8 @@ def run(plan, args):
     num_nodes = args['num-nodes']
     chain_configs = args['chain-configs']
 
-    image = AVALANCHEGO_IMAGE
     subnet_evm_binary_url = SUBNET_EVM_BINARY_URL
-
+    image = DEFAULT_AVALANCHEGO_IMAGE
     cpu_arch_result = plan.run_sh(
         description="Determining CPU system architecture",
         run="uname -m | tr -d '\n'",
@@ -38,8 +37,6 @@ def run(plan, args):
     if cpu_arch == "amd64":
        subnet_evm_binary_url = AMD64_SUBNET_EVM_BINARY_URL
 
-    image = DEFAULT_AVALANCHEGO_IMAGE
-    subnet_evm_binary_url = SUBNET_EVM_BINARY_URL
     useEtnaAssets = False
     if contains_etna_l1(chain_configs):
         useEtnaAssets = True
@@ -69,54 +66,58 @@ def run(plan, args):
         isEtna = chain.get('etna', False)
         chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"], isEtna)
 
-        # deploy teleporter messenger contract
-        teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
-        plan.print(teleporter_messenger_address)
+        # teleporter messenger needs to be manually deployed on etna subnets
+        if isEtna:
+            # deploy teleporter messenger contract
+            teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
+            plan.print(teleporter_messenger_address)
 
         # deploy teleporter registry contract
         teleporter_registry_address = contract_deployer.deploy_teleporter_registry(plan, chain_info["RPCEndpointBaseURL"], chain_name)
         plan.print("Teleporter Registry Address on {0}: {1}".format(chain_name, teleporter_registry_address))
         chain_info["TeleporterRegistryAddress"] = teleporter_registry_address
 
+        erc_token_name = chain.get("erc-20-token-name", "")
+        if erc_token_name != "":
+            erc20_token_address = contract_deployer.deploy_erc20_token(plan, chain_info["RPCEndpointBaseURL"], "TOK")
+            chain_info["ERC20TokenAddress"] = erc20_token_address
+            plan.print("ERC20 Token Address on {0}: {1}".format(chain_name, erc20_token_address))
+
         chain_info["NetworkId"] = chain["network-id"]
         l1_info[chain_name] = chain_info
 
     # start relayer
-    # relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
+    relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
-    # # deploy erc20 bridges
-    # for idx, chain in enumerate(chain_configs):
-    #     if "erc20-bridge-config" not in chain:
-    #         continue
+    # deploy erc20 bridges
+    if "erc20-bridge-config" in chain:
+        for idx, chain in enumerate(chain_configs):
 
-    #     bridge_config = chain["erc20-bridge-config"]
-    #     source_chain_name = chain["name"]
+            bridge_config = chain["erc20-bridge-config"]
+            source_chain_name = chain["name"]
 
-    #     erc20_token_address = contract_deployer.deploy_erc20_token(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK")
-    #     l1_info[source_chain_name]["ERC20TokenAddress"] = erc20_token_address
-    #     plan.print("ERC20 Token Address on {0}: {1}".format(source_chain_name, erc20_token_address))
+            token_home_address = contract_deployer.deploy_token_home(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK", teleporter_registry_address, l1_info[source_chain_name]["ERC20TokenAddress"])
+            l1_info[source_chain_name]["TokenHomeAddress"] = token_home_address
+            plan.print("Token Home Address on {0} for {1}: {2}".format(source_chain_name, "TOK", token_home_address))
 
-    #     token_home_address = contract_deployer.deploy_token_home(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK", teleporter_registry_address, erc20_token_address)
-    #     l1_info[source_chain_name]["TokenHomeAddress"] = token_home_address
-    #     plan.print("Token Home Address on {0} for {1}: {2}".format(source_chain_name, "TOK", token_home_address))
+            for idx, dest_chain_name in enumerate(bridge_config["destinations"]):
+                token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
+                l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
+        
+        bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
 
-    #     for idx, dest_chain_name in enumerate(bridge_config["destinations"]):
-    #         token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
-    #         l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
-
-    # # additional services:
-    # observability.launch_observability(plan, node_info)
-
-    # bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
-
-    # faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
+    # additional services:
+    observability.launch_observability(plan, node_info)
 
     for chain_name, chain in l1_info.items():
         # launch tx spammer for this chain
         tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], PK, chain_name)
 
         # launch block explorer for this chain
-        block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"])
+        public_blockscout_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"])
+        l1_info[chain_name]["PublicExplorerUrl"] = public_blockscout_url
+
+    faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
 
     return l1_info
    

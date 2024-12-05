@@ -136,6 +136,7 @@ if [[ $deployment_status != "0x1" ]]; then
     exit 1
 fi
 
-echo "Success! TeleporterMessenger $teleporter_version deployed to $teleporter_contract_address in transaction $deployment_tx_id."
+# echo "Success! TeleporterMessenger $teleporter_version deployed to $teleporter_contract_address in transaction $deployment_tx_id."
+leporterMessenger $teleporter_version deployed to $teleporter_contract_address in transaction $deployment_tx_id."
 
 exit 0

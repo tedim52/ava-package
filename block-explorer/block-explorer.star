@@ -101,6 +101,7 @@ def launch_blockscout(
     # )
 
     blockscout_url = "http://{}:{}".format(blockscout_service.hostname, blockscout_service.ports["http"].number)
+    public_blockscout_url = "http://127.0.0.1:{}".format(blockscout_service.ports["http"].number)
 
     # stats
     # stats_postgres_output = postgres.run(
@@ -195,4 +196,4 @@ def launch_blockscout(
     #     ),
     # )
 
-    return blockscout_url
+    return public_blockscout_url
