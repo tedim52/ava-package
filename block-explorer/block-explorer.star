@@ -89,16 +89,16 @@ def launch_blockscout(
         )
     )
     plan.print(blockscout_service)
-    plan.exec(
-        description="""
-        Allow 60s for blockscout to start indexing,
-        otherwise bs/Stats crashes because it expects to find content on DB
-        """,
-        service_name="blockscout-{0}".format(chain_name),
-        recipe=ExecRecipe(
-            command=["/bin/sh", "-c", "sleep 60"],
-        ),
-    )
+    # plan.exec(
+    #     description="""
+    #     Allow 60s for blockscout to start indexing,
+    #     otherwise bs/Stats crashes because it expects to find content on DB
+    #     """,
+    #     service_name="blockscout-{0}".format(chain_name),
+    #     recipe=ExecRecipe(
+    #         command=["/bin/sh", "-c", "sleep 60"],
+    #     ),
+    # )
 
     blockscout_url = "http://{}:{}".format(blockscout_service.hostname, blockscout_service.ports["http"].number)
 

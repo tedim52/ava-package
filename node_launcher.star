@@ -165,7 +165,6 @@ def wait_for_health(plan, node_name):
         timeout="5m",
     )
 
-
 def download_to_path_and_untar(plan, node_name, url, dest):
     plan.exec(
         service_name=node_name,

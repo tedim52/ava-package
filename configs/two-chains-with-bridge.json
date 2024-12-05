@@ -1,5 +1,4 @@
 {
-    "base-network-id": "1337",
     "chain-configs": [
         {
             "name": "myblockchain",
@@ -18,7 +17,7 @@
             "enable-teleporter": true
         }
     ],
-    "num-nodes": 3,
+    "num-nodes": 5,
     "node-cfg": {
         "network-id": "1337",
         "staking-enabled": false,

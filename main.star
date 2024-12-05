@@ -12,7 +12,8 @@ faucet = import_module('./faucet/faucet.star')
 tx_spammer = import_module('./tx_spammer.star')
 block_explorer = import_module('./block-explorer/block-explorer.star')
 
-AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
+DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
+ETNA_DEVNET_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.12.0-fuji"
 SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.10/subnet-evm_0.6.10_linux_arm64.tar.gz"
 AMD64_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.10/subnet-evm_0.6.10_linux_amd64.tar.gz"
 ETNA_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.12/subnet-evm_0.6.12_linux_arm64.tar.gz"
@@ -22,7 +23,7 @@ PK = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
 
 def run(plan, args):
     node_cfg = args['node-cfg']
-    networkd_id = args['base-network-id']
+    networkd_id = args['node-cfg']['network-id']
     num_nodes = args['num-nodes']
     chain_configs = args['chain-configs']
 
@@ -34,8 +35,16 @@ def run(plan, args):
         run="uname -m | tr -d '\n'",
     )
     cpu_arch = cpu_arch_result.output
-    if cpu_arch == "arm64":
+    if cpu_arch == "amd64":
        subnet_evm_binary_url = AMD64_SUBNET_EVM_BINARY_URL
+
+    image = DEFAULT_AVALANCHEGO_IMAGE
+    subnet_evm_binary_url = SUBNET_EVM_BINARY_URL
+    useEtnaAssets = False
+    if contains_etna_l1(chain_configs):
+        useEtnaAssets = True
+        image = ETNA_DEVNET_AVALANCHEGO_IMAGE 
+        subnet_evm_binary_url = ETNA_SUBNET_EVM_BINARY_URL
 
     # create builder, responsible for scripts to generate genesis, create subnets, create blockchains
     builder.init(plan, node_cfg)
@@ -48,17 +57,21 @@ def run(plan, args):
     node_info, bootnode_name = node_launcher.launch(
         plan,
         genesis,
-        AVALANCHEGO_IMAGE,
+        image,
         num_nodes,
         subnet_evm_id,
-        SUBNET_EVM_BINARY_URL, 
+        subnet_evm_binary_url
     )
     
     # create l1s
-    tx_pk = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
     l1_info = {}
     for idx, chain in enumerate(chain_configs):
-        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"])
+        isEtna = chain.get('etna', False)
+        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"], isEtna)
+
+        # deploy teleporter messenger contract
+        teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
+        plan.print(teleporter_messenger_address)
 
         # deploy teleporter registry contract
         teleporter_registry_address = contract_deployer.deploy_teleporter_registry(plan, chain_info["RPCEndpointBaseURL"], chain_name)
@@ -69,34 +82,34 @@ def run(plan, args):
         l1_info[chain_name] = chain_info
 
     # start relayer
-    relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
+    # relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
-    # deploy erc20 bridges
-    for idx, chain in enumerate(chain_configs):
-        if "erc20-bridge-config" not in chain:
-            continue
+    # # deploy erc20 bridges
+    # for idx, chain in enumerate(chain_configs):
+    #     if "erc20-bridge-config" not in chain:
+    #         continue
 
-        bridge_config = chain["erc20-bridge-config"]
-        source_chain_name = chain["name"]
+    #     bridge_config = chain["erc20-bridge-config"]
+    #     source_chain_name = chain["name"]
 
-        erc20_token_address = contract_deployer.deploy_erc20_token(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK")
-        l1_info[source_chain_name]["ERC20TokenAddress"] = erc20_token_address
-        plan.print("ERC20 Token Address on {0}: {1}".format(source_chain_name, erc20_token_address))
+    #     erc20_token_address = contract_deployer.deploy_erc20_token(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK")
+    #     l1_info[source_chain_name]["ERC20TokenAddress"] = erc20_token_address
+    #     plan.print("ERC20 Token Address on {0}: {1}".format(source_chain_name, erc20_token_address))
 
-        token_home_address = contract_deployer.deploy_token_home(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK", teleporter_registry_address, erc20_token_address)
-        l1_info[source_chain_name]["TokenHomeAddress"] = token_home_address
-        plan.print("Token Home Address on {0} for {1}: {2}".format(source_chain_name, "TOK", token_home_address))
+    #     token_home_address = contract_deployer.deploy_token_home(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK", teleporter_registry_address, erc20_token_address)
+    #     l1_info[source_chain_name]["TokenHomeAddress"] = token_home_address
+    #     plan.print("Token Home Address on {0} for {1}: {2}".format(source_chain_name, "TOK", token_home_address))
 
-        for idx, dest_chain_name in enumerate(bridge_config["destinations"]):
-            token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
-            l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
+    #     for idx, dest_chain_name in enumerate(bridge_config["destinations"]):
+    #         token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
+    #         l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
 
-    # additional services:
-    observability.launch_observability(plan, node_info)
+    # # additional services:
+    # observability.launch_observability(plan, node_info)
 
-    bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
+    # bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
 
-    faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
+    # faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
 
     for chain_name, chain in l1_info.items():
         # launch tx spammer for this chain
@@ -107,3 +120,8 @@ def run(plan, args):
 
     return l1_info
    
+def contains_etna_l1(chain_configs):
+    for chain in chain_configs:
+        if chain.get("etna") == True:
+            return True
+    return False

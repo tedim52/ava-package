@@ -11,7 +11,7 @@
             "vm": "subnetevm",
             "network-id": 555555,
             "enable-teleporter": true,
-            "token-name": "TOK"
+            "etna": true
         }
     ]
 }
