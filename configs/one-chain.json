@@ -5,7 +5,8 @@
             "name": "myblockchain",
             "vm": "subnetevm",
             "network-id": 555555,
-            "enable-teleporter": true
+            "enable-teleporter": true,
+            "token-name": "TOK"
         }
     ],
     "num-nodes": 3,
