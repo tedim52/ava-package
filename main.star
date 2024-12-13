@@ -43,6 +43,7 @@ def run(plan, args):
         image = ETNA_DEVNET_AVALANCHEGO_IMAGE 
         subnet_evm_binary_url = ETNA_SUBNET_EVM_BINARY_URL
 
+    # Stage 1: Launch primary network
     # create builder, responsible for scripts to generate genesis, create subnets, create blockchains
     builder.init(plan, node_cfg)
 
@@ -60,6 +61,7 @@ def run(plan, args):
         subnet_evm_binary_url
     )
     
+    # Stage 2: Launch L1s
     # create l1s
     l1_info = {}
     for idx, chain in enumerate(chain_configs):
@@ -81,11 +83,13 @@ def run(plan, args):
         if erc_token_name != "":
             erc20_token_address = contract_deployer.deploy_erc20_token(plan, chain_info["RPCEndpointBaseURL"], "TOK")
             chain_info["ERC20TokenAddress"] = erc20_token_address
+            chain_info["ERC20TokenName"] = erc_token_name 
             plan.print("ERC20 Token Address on {0}: {1}".format(chain_name, erc20_token_address))
 
         chain_info["NetworkId"] = chain["network-id"]
         l1_info[chain_name] = chain_info
 
+    # Stage 3: Launch Relayer
     # start relayer
     relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
@@ -111,13 +115,13 @@ def run(plan, args):
 
     for chain_name, chain in l1_info.items():
         # launch tx spammer for this chain
-        tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], PK, chain_name)
+        # tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], PK, chain_name)
 
         # launch block explorer for this chain
-        public_blockscout_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"])
+        # public_blockscout_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"])
         l1_info[chain_name]["PublicExplorerUrl"] = public_blockscout_url
 
-    faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
+    # faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
 
     return l1_info
    

@@ -71,11 +71,14 @@ def get_faucet_cfg_info(chain_info):
             "RPCUrl": chain["RPCEndpointBaseURL"],
             "ChainID": chain["NetworkId"],
             "PublicExplorerUrl": chain["PublicExplorerUrl"],
+            "ERC20TokenName": chain["ERC20TokenName"],
         })
         if "ERC20TokenAddress" in chain:
             erc_20_tokens.append({
                 "ID": "{0}{1}".format("TOK", chain_name),
                 "HostID": chain_name,
                 "ERC20ContractAddress": chain["ERC20TokenAddress"],
+                "ERC20TokenName": chain["ERC20TokenName"],
             })
+
     return evm_chains, erc_20_tokens
