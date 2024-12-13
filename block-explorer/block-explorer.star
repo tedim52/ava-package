@@ -59,6 +59,13 @@ def launch_blockscout(
                     application_protocol="http",
                 )
             },
+            public_ports ={
+                "http": PortSpec(
+                    number=4000,
+                    transport_protocol="TCP",
+                    application_protocol="http",
+                )
+            },
             cmd=[
                 "/bin/sh",
                 "-c",
@@ -101,7 +108,7 @@ def launch_blockscout(
     # )
 
     blockscout_url = "http://{}:{}".format(blockscout_service.hostname, blockscout_service.ports["http"].number)
-    public_blockscout_url = "http://127.0.0.1:{}".format(blockscout_service.ports["http"].number)
+    public_blockscout_url = "http://127.0.0.1:{}".format(blockscout_service.public_ports["http"].number)
 
     # stats
     # stats_postgres_output = postgres.run(
