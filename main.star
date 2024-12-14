@@ -19,6 +19,7 @@ AMD64_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/d
 ETNA_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.12/subnet-evm_0.6.12_linux_arm64.tar.gz"
 
 # TODO: Use a separate private key for faucet
+TX_SPAM_PK = "bcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31"
 PK = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
 
 def run(plan, args):
@@ -116,7 +117,7 @@ def run(plan, args):
     c = 0
     for chain_name, chain in l1_info.items():
         # launch tx spammer for this chain
-        tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], PK, chain_name)
+        tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], TX_SPAM_PK, chain_name)
 
         # launch block explorer for this chain
         blockscout_frontend_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"], c)
