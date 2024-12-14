@@ -1,5 +1,5 @@
 {
-    "num-nodes": 3,
+    "num-nodes": 2,
     "node-cfg": {
         "network-id": "1337",
         "staking-enabled": false,

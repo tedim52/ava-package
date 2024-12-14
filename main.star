@@ -95,25 +95,31 @@ def run(plan, args):
     relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
     # deploy erc20 bridges
-    if "erc20-bridge-config" in chain:
-        for idx, chain in enumerate(chain_configs):
+    for idx, chain in enumerate(chain_configs):
+        if "erc20-bridge-config" not in chain:
+            continue
 
-            bridge_config = chain["erc20-bridge-config"]
-            source_chain_name = chain["name"]
+        bridge_config = chain["erc20-bridge-config"]
+        source_chain_name = chain["name"]
 
-            token_home_address = contract_deployer.deploy_token_home(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK", teleporter_registry_address, l1_info[source_chain_name]["ERC20TokenAddress"])
-            l1_info[source_chain_name]["TokenHomeAddress"] = token_home_address
-            plan.print("Token Home Address on {0} for {1}: {2}".format(source_chain_name, "TOK", token_home_address))
+        erc20_token_address = contract_deployer.deploy_erc20_token(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK")
+        l1_info[source_chain_name]["ERC20TokenAddress"] = erc20_token_address
+        plan.print("ERC20 Token Address on {0}: {1}".format(source_chain_name, erc20_token_address))
 
-            for idx, dest_chain_name in enumerate(bridge_config["destinations"]):
-                token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
-                l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
+        token_home_address = contract_deployer.deploy_token_home(plan, l1_info[source_chain_name]["RPCEndpointBaseURL"], "TOK", teleporter_registry_address, erc20_token_address)
+        l1_info[source_chain_name]["TokenHomeAddress"] = token_home_address
+        plan.print("Token Home Address on {0} for {1}: {2}".format(source_chain_name, "TOK", token_home_address))
+
+        for idx, dest_chain_name in enumerate(bridge_config["destinations"]):
+            token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
+            l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
         
-    bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
 
     # additional services:
     observability.launch_observability(plan, node_info)
 
+    bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
+    
     c = 0
     for chain_name, chain in l1_info.items():
         # launch tx spammer for this chain
