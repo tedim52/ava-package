@@ -114,7 +114,6 @@ def launch(
         node_info[node_name] = {
             "rpc-url": "http://{0}:{1}".format(node.ip_address, RPC_PORT_NUM),
             "public-rpc-url": "http://{0}:{1}".format(PUBLIC_IP, RPC_PORT_NUM),
-
             "launch-command": launch_node_cmd,
         }
 
@@ -126,7 +125,7 @@ def launch(
 
     return node_info, NODE_NAME_PREFIX + "0"
 
-def track_subnet(plan, node_name, node_info):
+def track_subnet(plan, node_name, node_info, chain_id):
     subnet_ids = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/data/subnet_ids.txt")
     node_info["launch-command"].append("--track-subnets={0}".format(subnet_ids))
 
@@ -136,7 +135,18 @@ def track_subnet(plan, node_name, node_info):
             command=["/bin/sh", "-c",
                         """grep -l 'avalanchego' /proc/*/status | awk -F'/' '{print $3}' | while read -r pid; do kill -9 "$pid"; done"""]
         ),
-        description="killing avalanche go process on {0}".format(node_name)
+        description="Killing avalanche go process on {0}".format(node_name)
+    )
+
+    subnet_evm_config = read_file("./static-files/subnetevm-config.json")
+    node_data_dirpath = ABS_DATA_DIRPATH + node_name
+    subnet_evm_config_dir_path = "{0}/configs/chains/{1}".format(node_data_dirpath, chain_id)
+    plan.exec(
+        service_name=node_name,
+        recipe=ExecRecipe(
+            command=["/bin/sh", "-c", "mkdir -p {0} && echo '{1}' >> {0}/config.json".format(subnet_evm_config_dir_path, subnet_evm_config)]
+        ),
+        description="Creating chain config for {0} on {1}".format(chain_id, node_name)
     )
 
     plan.exec(
@@ -144,7 +154,7 @@ def track_subnet(plan, node_name, node_info):
         recipe=ExecRecipe(
             command=["/bin/sh", "-c", " ".join(node_info["launch-command"]) + " >/dev/null 2>&1 &"],
         ),
-        description="restarting avalanche go on {0}".format(node_name),
+        description="Restarting avalanche go on {0}".format(node_name),
     )
 
 def wait_for_health(plan, node_name):

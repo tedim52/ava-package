@@ -108,20 +108,22 @@ def run(plan, args):
                 token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
                 l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
         
-        bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
+    bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
 
     # additional services:
     observability.launch_observability(plan, node_info)
 
+    c = 0
     for chain_name, chain in l1_info.items():
         # launch tx spammer for this chain
-        # tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], PK, chain_name)
+        tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], PK, chain_name)
 
         # launch block explorer for this chain
-        # public_blockscout_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"])
-        l1_info[chain_name]["PublicExplorerUrl"] = public_blockscout_url
+        blockscout_frontend_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"], c)
+        l1_info[chain_name]["PublicExplorerUrl"] = blockscout_frontend_url
+        c += 1
 
-    # faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
+    faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
 
     return l1_info
    

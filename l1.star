@@ -10,6 +10,7 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
     chain_info = create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, num_nodes, isEtna, vm_id, chain_name, l1_counter, chain_id)
     
     subnet_id = chain_info["SubnetId"]
+    chain_id = chain_info["BlockchainId"]
 
     # store subnet id
     if l1_counter == 0:
@@ -19,7 +20,7 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
     
     # instruct all nodes to track this l1
     for node_name, node in node_info.items():
-        node_launcher.track_subnet(plan, node_name, node)
+        node_launcher.track_subnet(plan, node_name, node, chain_id)
         plan.print("{0} tracking subnet {1}".format(node_name, subnet_id))
 
     # wait for bootnode to come online to ensure health
