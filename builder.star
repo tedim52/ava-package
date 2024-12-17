@@ -1,7 +1,6 @@
 utils = import_module("./utils.star")
 
 BUILDER_SERVICE_NAME = "builder"
-SUBNET_CREATION_CODE_PATH = "/tmp/subnet-creator-code"
 
 def init(plan, node_cfg_map):
     node_cfg_template = read_file("./static-files/config.json.tmpl")
@@ -39,21 +38,15 @@ def init(plan, node_cfg_map):
     #     name="subnet-genesis-with-teleporter",
     # )
 
-    genesis_generator_code = plan.upload_files("./genesis-generator-code", name="genesis-generator-code")
-
-    subnet_creator_code = plan.upload_files("./subnet-creator-code", name="subnet-creator-code")
-
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
         config=ServiceConfig(
             image =ImageBuildSpec(
                 image_name="tedim52/builder:latest",
-                build_context_dir="."
+                build_context_dir="./builder"
             ),
             entrypoint=["sleep", "9999999"],
             files={
-                GENESIS_GENERATOR_CODE_PATH: genesis_generator_code,
-                SUBNET_CREATION_CODE_PATH: subnet_creator_code,
                 "/tmp/node-config": node_cfg,
                 "/tmp/subnet-genesis": Directory(
                     artifact_names=[subnet_genesis,subnet_genesis_with_teleporter],
@@ -94,7 +87,7 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
 def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
     plan.exec(
         description="Creating subnet and blockchain for {0}".format(chain_name),
-        service_name = builder.BUILDER_SERVICE_NAME,
+        service_name = BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
             command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")]
         )
@@ -102,22 +95,22 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
 
     plan.exec(
         description="Adding validators for {0}".format(chain_name),
-        service_name = builder.BUILDER_SERVICE_NAME,
+        service_name = BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
             command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")]
         )
     )
 
 
-    subnet_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/subnetId.txt".format(l1_counter))
-    blockchain_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/blockchainId.txt".format(subnet_id))
-    hex_blockchain_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/hexChainId.txt".format(subnet_id))
-    allocations = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/allocations.txt".format(subnet_id))
-    genesis_chain_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/genesisChainId.txt".format(subnet_id))
+    subnet_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/subnetId.txt".format(l1_counter))
+    blockchain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/blockchainId.txt".format(subnet_id))
+    hex_blockchain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/hexChainId.txt".format(subnet_id))
+    allocations = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/allocations.txt".format(subnet_id))
+    genesis_chain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/genesisChainId.txt".format(subnet_id))
 
     validator_ids = []
     for index in range (0, num_nodes):
-        validator_ids.append(utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/node-{1}/validator_id.txt".format(subnet_id, index)))
+        validator_ids.append(utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/node-{1}/validator_id.txt".format(subnet_id, index)))
 
     http_trimmed_uri = uri.replace("http://", "", 1)
     return {
