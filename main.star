@@ -26,7 +26,7 @@ def run(plan, args):
     node_cfg = args['node-cfg']
     networkd_id = args['node-cfg']['network-id']
     num_nodes = args['num-nodes']
-    chain_configs = args['chain-configs']
+    chain_configs = args.get('chain-configs', [])
 
     subnet_evm_binary_url = SUBNET_EVM_BINARY_URL
     image = DEFAULT_AVALANCHEGO_IMAGE
@@ -61,6 +61,7 @@ def run(plan, args):
         subnet_evm_id,
         subnet_evm_binary_url
     )
+    plan.print("Node Info: {0}".format(node_info))
     
     # Stage 2: Launch L1s
     # create l1s
@@ -92,7 +93,8 @@ def run(plan, args):
 
     # Stage 3: Launch Relayer
     # start relayer
-    relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
+    if len(l1_info) > 0:
+        relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
     # deploy erc20 bridges
     for idx, chain in enumerate(chain_configs):
@@ -130,7 +132,8 @@ def run(plan, args):
         l1_info[chain_name]["PublicExplorerUrl"] = blockscout_frontend_url
         c += 1
 
-    faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
+    if len(l1_info) > 0:
+        faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
 
     return l1_info
    

@@ -7,7 +7,7 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
     # create subnet and blockchain for this l1
     node_rpc_uri = node_info[bootnode_name]["rpc-url"] 
     public_node_rpc_uri = node_info[bootnode_name]["public-rpc-url"] 
-    chain_info = create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, num_nodes, isEtna, vm_id, chain_name, l1_counter, chain_id)
+    chain_info = builder.create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, num_nodes, isEtna, vm_id, chain_name, l1_counter, chain_id)
     
     subnet_id = chain_info["SubnetId"]
     chain_id = chain_info["BlockchainId"]
@@ -35,7 +35,7 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = builder.BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")]
+            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")]
         )
     )
 
@@ -45,7 +45,7 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
         description="Adding validators for {0}".format(chain_name),
         service_name = builder.BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")]
+            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")]
         )
     )
 

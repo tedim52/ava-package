@@ -56,11 +56,13 @@ def run(
 
     grafana_config_files_artifact = plan.render_templates(
         config=grafana_render_templates_config,
+        name="grafana-config-template"
     )
 
     # grab grafana dashboards from given location and upload them into enclave as a files artifact
     grafana_dashboards_files_artifact = plan.upload_files(
-        src=grafana_dashboards_location, name="grafana-dashboards"
+        src=grafana_dashboards_location,
+        name="grafana-dashboards"
     )
 
     plan.add_service(
