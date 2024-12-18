@@ -12,6 +12,15 @@ def launch_observability(plan, node_info):
                 "job": node_name,
             },
         })
+    # metrics_jobs.append({ 
+    #     "Name": "{0}-metrics".format("node-0"), 
+    #     "Endpoint": node_info["node-0"]["rpc-url"].replace("http://", "", 1),
+    #     "MetricsPath": "/ext/metrics",
+    #     "Labels": {
+    #         "job": "node-0",
+    #     },
+    # })
+        
 
     # TODO: run node exporter prom plugin
 

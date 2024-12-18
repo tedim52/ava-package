@@ -115,12 +115,12 @@ def run(plan, args):
         for idx, dest_chain_name in enumerate(bridge_config["destinations"]):
             token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
             l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
-        
 
     # additional services:
     observability.launch_observability(plan, node_info)
 
-    bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
+    if len(l1_info) >= 2:
+        bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
     
     c = 0
     for chain_name, chain in l1_info.items():
