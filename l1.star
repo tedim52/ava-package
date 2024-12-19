@@ -1,4 +1,4 @@
-builder = import_module('./builder.star')
+builder = import_module('./builder/builder.star')
 utils = import_module('./utils.star')
 node_launcher = import_module('./node_launcher.star')
 

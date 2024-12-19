@@ -1,8 +1,6 @@
-utils = import_module("./utils.star")
+utils = import_module("../utils.star")
 
 BUILDER_SERVICE_NAME = "builder"
-SUBNET_CREATION_CODE_PATH = "/tmp/subnet-creator-code"
-GENESIS_GENERATOR_CODE_PATH = "/tmp/genesis-generator-code"
 
 def init(plan, node_cfg_map):
     node_cfg_template = read_file("./static-files/config.json.tmpl")
@@ -40,18 +38,15 @@ def init(plan, node_cfg_map):
     #     name="subnet-genesis-with-teleporter",
     # )
 
-    genesis_generator_code = plan.upload_files("./genesis-generator-code", name="genesis-generator-code")
-
-    subnet_creator_code = plan.upload_files("./subnet-creator-code", name="subnet-creator-code")
-
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
         config=ServiceConfig(
-            image = "golang:1.22.8",
-            entrypoint=["sleep", "99999"],
+            image =ImageBuildSpec(
+                image_name="tedim52/builder:latest",
+                build_context_dir="./"
+            ),
+            entrypoint=["sleep", "9999999"],
             files={
-                GENESIS_GENERATOR_CODE_PATH: genesis_generator_code,
-                SUBNET_CREATION_CODE_PATH: subnet_creator_code,
                 "/tmp/node-config": node_cfg,
                 "/tmp/subnet-genesis": Directory(
                     artifact_names=[subnet_genesis,subnet_genesis_with_teleporter],
@@ -65,7 +60,7 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
         service_name=BUILDER_SERVICE_NAME,
         recipe=ExecRecipe(
             command=[
-                "/bin/sh", "-c", "cd {0} && go run main.go {1} {2} {3}".format(GENESIS_GENERATOR_CODE_PATH, network_id, num_nodes, vmName)]
+                "/bin/sh", "-c", "./genesis-generator {0} {1} {2}".format(network_id, num_nodes, vmName)]
         ),
         description="Generating genesis for primary network with args network id '{0}', num_nodes '{1}', vm '{2}'".format(network_id, num_nodes, vmName),
     )
@@ -88,3 +83,45 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
     vm_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/data/vmId.txt")
 
     return genesis_data, vm_id
+
+def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
+    plan.exec(
+        description="Creating subnet and blockchain for {0}".format(chain_name),
+        service_name = BUILDER_SERVICE_NAME,
+        recipe = ExecRecipe(
+            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")]
+        )
+    )
+
+    plan.exec(
+        description="Adding validators for {0}".format(chain_name),
+        service_name = BUILDER_SERVICE_NAME,
+        recipe = ExecRecipe(
+            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")]
+        )
+    )
+
+
+    subnet_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/subnetId.txt".format(l1_counter))
+    blockchain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/blockchainId.txt".format(subnet_id))
+    hex_blockchain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/hexChainId.txt".format(subnet_id))
+    allocations = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/allocations.txt".format(subnet_id))
+    genesis_chain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/genesisChainId.txt".format(subnet_id))
+
+    validator_ids = []
+    for index in range (0, num_nodes):
+        validator_ids.append(utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/node-{1}/validator_id.txt".format(subnet_id, index)))
+
+    http_trimmed_uri = uri.replace("http://", "", 1)
+    return {
+        "SubnetId": subnet_id,
+        "BlockchainId": blockchain_id, 
+        "BlockchainIdHex": hex_blockchain_id,
+        "GenesisChainId": genesis_chain_id,
+        "VM": vm_id,
+        "Allocations": allocations,
+        "ValidatorIds": validator_ids,
+        "RPCEndpointBaseURL": "{0}/ext/bc/{1}/rpc".format(uri, blockchain_id),
+        "PublicRPCEndpointBaseURL": "{0}/ext/bc/{1}/rpc".format(public_uri, blockchain_id),
+        "WSEndpointBaseURL": "ws://{0}/ext/bc/{1}/ws".format(http_trimmed_uri, blockchain_id),
+    }

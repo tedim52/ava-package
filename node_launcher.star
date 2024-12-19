@@ -1,4 +1,4 @@
-builder = import_module("./builder.star")
+builder = import_module("./builder/builder.star")
 utils = import_module("./utils.star")
 
 NODE_ID_PATH = "/tmp/data/node-{0}/node_id.txt"
@@ -138,7 +138,7 @@ def track_subnet(plan, node_name, node_info, chain_id):
         description="Killing avalanche go process on {0}".format(node_name)
     )
 
-    subnet_evm_config = read_file("./static-files/subnetevm-config.json")
+    subnet_evm_config = read_file("./builder/static-files/subnetevm-config.json")
     node_data_dirpath = ABS_DATA_DIRPATH + node_name
     subnet_evm_config_dir_path = "{0}/configs/chains/{1}".format(node_data_dirpath, chain_id)
     plan.exec(

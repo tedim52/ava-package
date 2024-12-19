@@ -4,11 +4,15 @@ This is a [Kurtosis](https://github.com/kurtosis-tech/kurtosis/) package for spi
 
 Run this package
 ----------------
-If you have [Kurtosis installed][install-kurtosis], clone this repo locally and run:
+If you have [Kurtosis installed][install-kurtosis], clone this repo locally and run: 
 
 ```bash
-kurtosis run . --enclave avalanche --args-file args.json
+kurtosis run . --enclave avalanche --args-file configs/one-chain.json
 ```
+
+Once this repo is public users will also be able to run `kurtosis run github.com/ava-labs/avalanche-package` so they don't have to clone the repo.
+
+You can find other configurations under the `config` folder.
 
 To remove the created [enclave][enclaves-reference], run `kurtosis enclave rm avalanche -f`.
 
@@ -17,6 +21,8 @@ To remove the created [enclave][enclaves-reference], run `kurtosis enclave rm av
 Create a new Codespace from this repository using the button below. The default settings for the Codespace will work just fine.
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=master&repo=864218549&skip_quickstart=true&machine=standardLinux32gb&devcontainer_path=.devcontainer%2Fdevcontainer.json)
+
+Once the codespace is set up, run `chmod 777 ./scripts/setup-codespace.sh` followed by `./scripts/setup-codespace.sh` This will simply check that Docker is running and install Kurtosis. Then you will be able to run Kurtosis commands.
 
 #### Configuration
 

@@ -1,4 +1,5 @@
 {
+    "network": "fuji",
     "chain-configs": [
         {
             "name": "myblockchain",
