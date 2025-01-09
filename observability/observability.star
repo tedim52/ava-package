@@ -2,31 +2,23 @@ prometheus = import_module("github.com/kurtosis-tech/prometheus-package/main.sta
 grafana = import_module("github.com/kurtosis-tech/grafana-package/main.star")
 
 def launch_observability(plan, node_info):
+    # only launch observability on first node
+    # TODO: if needed launch a grafana instance for each node
     metrics_jobs = []
-    for node_name, node_i in node_info.items():
-        metrics_jobs.append({ 
-            "Name": "{0}-metrics".format(node_name), 
-            "Endpoint": node_i["rpc-url"].replace("http://", "", 1),
-            "MetricsPath": "/ext/metrics",
-            "Labels": {
-                "job": node_name,
-            },
-        })
-    # metrics_jobs.append({ 
-    #     "Name": "{0}-metrics".format("node-0"), 
-    #     "Endpoint": node_info["node-0"]["rpc-url"].replace("http://", "", 1),
-    #     "MetricsPath": "/ext/metrics",
-    #     "Labels": {
-    #         "job": "node-0",
-    #     },
-    # })
-        
-
-    # TODO: run node exporter prom plugin
-
+    node_name = node_info.keys()[0]
+    metrics_jobs.append({ 
+        "Name": "{0}-metrics".format(node_name), 
+        "Endpoint": node_info[node_name]["rpc-url"].replace("http://", "", 1),
+        "MetricsPath": "/ext/metrics",
+        "Labels": {
+            # "job": node_name,
+            "job": "avalanchego",
+        },
+    })
+       
     prometheus_url = prometheus.run(plan, metrics_jobs)
 
-    # TODO: get these dashboards up and running on a git repo
+    # TODO: pass the dashboards in as a files artifact and not a locat
     grafana.run(plan, prometheus_url, "/dashboards")
 
 
