@@ -22,21 +22,8 @@ def init(plan, node_cfg_map):
         name="node-cfg"
     )
 
-    subnet_genesis = plan.upload_files("./static-files/example-subnet-genesis.json", name="subnet-genesis")
-    # subnet_genesis_with_teleporter = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json", name="subnet-genesis-with-teleporter")
-    # subnet_genesis_with_teleporter_tmpl = read_file("./static-files/example-subnet-genesis-with-teleporter.json.tmpl")
-    subnet_genesis_with_teleporter = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json.tmpl", "subnet_genesis_with_teleporter")
-    # subnet_genesis_with_teleporter = plan.render_templates(
-    #     config={
-    #         "example-subnet-genesis-with-teleporter.json": struct(
-    #             template=subnet_genesis_with_teleporter_tmpl,
-    #             data={
-    #                 "NetworkId":
-    #             },
-    #         )
-    #     },
-    #     name="subnet-genesis-with-teleporter",
-    # )
+    subnet_genesis_with_teleporter_tmpl = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json.tmpl", "subnet_genesis_with_teleporter")
+    etna_contracts = plan.upload_files("./static-files/contracts/")
 
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
@@ -49,8 +36,9 @@ def init(plan, node_cfg_map):
             files={
                 "/tmp/node-config": node_cfg,
                 "/tmp/subnet-genesis": Directory(
-                    artifact_names=[subnet_genesis,subnet_genesis_with_teleporter],
+                    artifact_names=[subnet_genesis_with_teleporter_tmpl],
                 ),
+                "/tmp/contracts/": etna_contracts
             }
         )
     )

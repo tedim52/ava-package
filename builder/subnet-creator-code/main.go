@@ -15,6 +15,7 @@ import (
 	"time"
 
 	teleporter "github.com/ava-labs/avalanche-cli/pkg/interchain/genesis"
+	"github.com/ava-labs/avalanche-cli/pkg/vm"
 	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
