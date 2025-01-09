@@ -108,7 +108,6 @@ cast estimate --rpc-url $rpc_url \
     --from $teleporter_deployer_address \
     --create $teleporter_messenger_bytecode > /dev/null
 
-
 # Check the current balance of the deployer address.
 deployer_balance=$(cast balance --rpc-url $rpc_url $teleporter_deployer_address)
 
