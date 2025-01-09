@@ -30,13 +30,10 @@ import (
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
 	"github.com/ava-labs/coreth/plugin/evm"
-	"github.com/ava-labs/coreth/utils"
 	"github.com/ava-labs/subnet-evm/commontype"
 	"github.com/ava-labs/subnet-evm/core"
 	"github.com/ava-labs/subnet-evm/core/types"
 	"github.com/ava-labs/subnet-evm/params"
-	"github.com/ava-labs/subnet-evm/precompile/contracts/warp"
-	"github.com/ava-labs/subnet-evm/precompile/precompileconfig"
 	geth_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -111,7 +108,7 @@ const (
 )
 
 type wallet struct {
-	p primary.Wallet
+	p *primary.Wallet
 	x x.Wallet
 	c c.Wallet
 }
@@ -600,11 +597,9 @@ func newWalletWithSubnet(uri string, subnetId ids.ID) (*wallet, error) {
 
 	// MakeWallet fetches the available UTXOs owned by [kc] on the network that [uri] is hosting.
 	walletSyncStartTime := time.Now()
-	createdWallet, err := primary.MakeWallet(ctx, &primary.WalletConfig{
-		URI:          uri,
-		AVAXKeychain: kc,
-		EthKeychain:  kc,
-		SubnetIDs:    []ids.ID{subnetId},
+	createdWallet, err := primary.MakeWallet(ctx, uri, kc, kc, primary.WalletConfig{
+		SubnetIDs:     []ids.ID{subnetId},
+		ValidationIDs: []ids.ID{},
 	})
 	if err != nil {
 		log.Fatalf("failed to initialize wallet: %s\n", err)
@@ -626,10 +621,9 @@ func newWallet(uri string) (*wallet, error) {
 
 	// MakeWallet fetches the available UTXOs owned by [kc] on the network that [uri] is hosting.
 	walletSyncStartTime := time.Now()
-	createdWallet, err := primary.MakeWallet(ctx, &primary.WalletConfig{
-		URI:          uri,
-		AVAXKeychain: kc,
-		EthKeychain:  kc,
+	createdWallet, err := primary.MakeWallet(ctx, uri, kc, kc, primary.WalletConfig{
+		SubnetIDs:     []ids.ID{},
+		ValidationIDs: []ids.ID{},
 	})
 	if err != nil {
 		log.Fatalf("failed to initialize wallet: %s\n", err)
