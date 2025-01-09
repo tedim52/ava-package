@@ -58,30 +58,9 @@ def run(
     Returns:
         prometheus_url: endpoint to prometheus service inside the enclave (eg. 123.123.212:9090)
     """
-    # start node exporter service
-    node_exporter = plan.add_service(
-        name="node-exporter",
-        config=ServiceConfig(
-            # image=ImageBuildSpec(
-            #     build_context_dir="./",
-            #     image_name="tedim52/node-exporter"
-            # ),
-            image="tedim52/node-exporter",
-            cmd=["/bin/sh", "-c", "./node_exporter"],
-            ports={
-                "node-exporter": PortSpec(
-                    number=9100,
-                    transport_protocol="TCP",
-                    application_protocol="http"
-                )
-            }
-        )
-    )
-    
     prometheus_config_template = read_file(src="./static-files/prometheus.yml.tmpl")
 
-    prometheus_config_data = {"MetricsJobs": get_metrics_jobs(metrics_jobs), "NodeExporterIpAddress": node_exporter.ip_address }
-    # prometheus_config_data = {"MetricsJobs": get_metrics_jobs(metrics_jobs)}
+    prometheus_config_data = {"MetricsJobs": get_metrics_jobs(metrics_jobs)}
 
     prom_config_files_artifact = plan.render_templates(
         config={
@@ -101,7 +80,6 @@ def run(
     prometheus_service = plan.add_service(
         name=name,
         config=ServiceConfig(
-            # image="prom/prometheus:v2.47.0",
             image="prom/prometheus:latest",
             ports={
                 "http": PortSpec(
