@@ -11,6 +11,7 @@
             "vm": "subnetevm",
             "network-id": 555555,
             "enable-teleporter": true,
+            "erc-20-token-name": "TED",
             "etna": true
         }
     ]

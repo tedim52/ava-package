@@ -33,30 +33,30 @@ def deploy_teleporter_registry(plan, chain_rpc_url, chain_name):
     teleporter_registry_address = read_result.output
     return teleporter_registry_address
 
-def deploy_teleporter_messenger(plan, chain_rpc_url, chain_name):
-    deploy_teleporter_script = plan.upload_files(src="./deploy_teleporter.sh", name="deploy-teleporter-script-{0}".format(chain_name))
-    deploy_result =plan.run_sh(
-        description="Deploying Teleporter Messenger contract to L1",
-        name="teleporter-messenger-deployer",
-        run="/home/deploy_teleporter.sh --version {0} --rpc-url {1} --private-key {2} > /home/messenger_address.txt".format(TELEPORTER_REGISTRY_VERSION, chain_rpc_url, PRIVATE_KEY),
-        image=FOUNDRY_IMAGE,
-        files = {
-            "/home": deploy_teleporter_script,
-        },
-        store=[
-            StoreSpec(name="messenger-address-artifact", src="/home/messenger_address.txt")
-        ],
-    )
-    read_result = plan.run_sh(
-        description="Reading Teleporter Messenger address",
-        name="teleporter-messenger-address-reader",
-        run="cat /home/messenger_address.txt | tr -d '\n'",
-        files={
-            "/home": deploy_result.files_artifacts[0],
-        }
-    )
-    teleporter_messenger = read_result.output
-    return teleporter_messenger
+# def deploy_teleporter_messenger(plan, chain_rpc_url, chain_name):
+#     deploy_teleporter_script = plan.upload_files(src="./deploy_teleporter.sh", name="deploy-teleporter-script-{0}".format(chain_name))
+#     deploy_result =plan.run_sh(
+#         description="Deploying Teleporter Messenger contract to L1",
+#         name="teleporter-messenger-deployer",
+#         run="/home/deploy_teleporter.sh --version {0} --rpc-url {1} --private-key {2} > /home/messenger_address.txt".format(TELEPORTER_REGISTRY_VERSION, chain_rpc_url, PRIVATE_KEY),
+#         image=FOUNDRY_IMAGE,
+#         files = {
+#             "/home": deploy_teleporter_script,
+#         },
+#         store=[
+#             StoreSpec(name="messenger-address-artifact", src="/home/messenger_address.txt")
+#         ],
+#     )
+#     read_result = plan.run_sh(
+#         description="Reading Teleporter Messenger address",
+#         name="teleporter-messenger-address-reader",
+#         run="cat /home/messenger_address.txt | tr -d '\n'",
+#         files={
+#             "/home": deploy_result.files_artifacts[0],
+#         }
+#     )
+#     teleporter_messenger = read_result.output
+#     return teleporter_messenger
 
 
 # TODO: enable parameterizing token name
