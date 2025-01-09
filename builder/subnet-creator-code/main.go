@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -13,21 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ava-labs/avalanche-cli/pkg/validatormanager"
-	"github.com/ava-labs/avalanche-cli/pkg/vm"
-	blockchainSDK "github.com/ava-labs/avalanche-cli/sdk/blockchain"
-	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
-	"github.com/ava-labs/avalanchego/wallet/chain/c"
-	"github.com/ava-labs/coreth/plugin/evm"
-	"github.com/ava-labs/coreth/utils"
-	"github.com/ava-labs/subnet-evm/commontype"
-	"github.com/ava-labs/subnet-evm/core/types"
-	"github.com/ava-labs/subnet-evm/params"
-	"github.com/ava-labs/subnet-evm/precompile/contracts/warp"
-	"github.com/ava-labs/subnet-evm/precompile/precompileconfig"
-
+	teleporter "github.com/ava-labs/avalanche-cli/pkg/interchain/genesis"
 	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/ava-labs/avalanchego/utils/perms"
 	"github.com/ava-labs/avalanchego/vms/components/avax"
 	"github.com/ava-labs/avalanchego/vms/components/verify"
@@ -35,9 +25,20 @@ import (
 	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 	"github.com/ava-labs/avalanchego/vms/platformvm/txs"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
+	"github.com/ava-labs/avalanchego/wallet/chain/c"
 	"github.com/ava-labs/avalanchego/wallet/chain/x"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
+	"github.com/ava-labs/coreth/plugin/evm"
+	"github.com/ava-labs/coreth/utils"
+	"github.com/ava-labs/subnet-evm/commontype"
+	"github.com/ava-labs/subnet-evm/core"
+	"github.com/ava-labs/subnet-evm/core/types"
+	"github.com/ava-labs/subnet-evm/params"
+	"github.com/ava-labs/subnet-evm/precompile/contracts/warp"
+	"github.com/ava-labs/subnet-evm/precompile/precompileconfig"
+	geth_common "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const (
@@ -83,6 +84,12 @@ const (
 	// delimiters
 	allocationDelimiter = ","
 	addrAllocDelimiter  = "="
+
+	ValidatorContractAddress  = "0xC0DEBA5E00000000000000000000000000000000"
+	ProxyAdminContractAddress = "0xC0FFEE1234567890aBcDEF1234567890AbCdEf34"
+	ProxyContractAddress      = "0xFEEDC0DE0000000000000000000000000000000"
+	RewardCalculatorAddress   = "0xDEADC0DE00000000000000000000000000000000"
+	ValidatorMessagesAddress  = "0xca11ab1e00000000000000000000000000000000"
 )
 
 // https://github.com/ava-labs/avalanche-cli/blob/917ef2e440880d68452080b4051c3031be76b8af/pkg/elasticsubnet/config_prompt.go#L18-L38
@@ -682,6 +689,8 @@ func BytesToAddress(b []byte) [20]byte {
 func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName string) ([]byte, error) {
 	ethAddr := evm.PublicKeyToEthAddress(ownerKey.PublicKey())
 
+	now := time.Now().Unix()
+
 	feeConfig := commontype.FeeConfig{
 		GasLimit:                 big.NewInt(12000000),
 		TargetBlockRate:          2,
@@ -691,6 +700,32 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 		MinBlockGasCost:          big.NewInt(0),
 		MaxBlockGasCost:          big.NewInt(1000000),
 		BlockGasCostStep:         big.NewInt(200000),
+	}
+
+	genesis := core.Genesis{
+		Config: &params.ChainConfig{
+			BerlinBlock:         big.NewInt(0),
+			ByzantiumBlock:      big.NewInt(0),
+			ConstantinopleBlock: big.NewInt(0),
+			EIP150Block:         big.NewInt(0),
+			EIP155Block:         big.NewInt(0),
+			EIP158Block:         big.NewInt(0),
+			HomesteadBlock:      big.NewInt(0),
+			IstanbulBlock:       big.NewInt(0),
+			LondonBlock:         big.NewInt(0),
+			MuirGlacierBlock:    big.NewInt(0),
+			PetersburgBlock:     big.NewInt(0),
+			FeeConfig:           feeConfig,
+			ChainID:             big.NewInt(int64(chainID)),
+		},
+		Alloc: types.GenesisAlloc{
+			ethAddr: {
+				Balance: defaultPoAOwnerBalance,
+			},
+		},
+		Difficulty: big.NewInt(0),
+		GasLimit:   uint64(12000000),
+		Timestamp:  uint64(now),
 	}
 
 	teleporter_deployer_address := BytesToAddress([]byte("0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC"))
@@ -703,37 +738,155 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 	fmt.Print(allocation)
 
 	// add teleporter contracts
-	// teleporter.AddICMMessengerContractToAllocations(allocation)
+	teleporter.AddICMMessengerContractToAllocations(allocation)
 
 	// add contracts needed for etna upgrade
-	validatormanager.AddPoAValidatorManagerContractToAllocations(allocation)
-	validatormanager.AddTransparentProxyContractToAllocations(allocation, ethAddr.String()) //TODO: might need to be zero address
+	// validatormanager.AddPoAValidatorManagerContractToAllocations(allocation)
+	// validatormanager.AddTransparentProxyContractToAllocations(allocation, ethAddr.String()) //TODO: might need to be zero address
 
-	genesisTimestamp := utils.TimeToNewUint64(time.Now())
+	proxyAdminBytecode, err := loadHexFile("/tmp/contracts/proxy_compiled/deployed_proxy_admin_bytecode.txt")
+	if err != nil {
+		log.Fatalf("❌ Failed to get proxy admin deployed bytecode: %s\n", err)
+	}
 
-	precompiles := params.Precompiles{}
-	precompiles[warp.ConfigKey] = &warp.Config{
-		QuorumNumerator:              warp.WarpDefaultQuorumNumerator,
-		RequirePrimaryNetworkSigners: true,
-		Upgrade: precompileconfig.Upgrade{
-			BlockTimestamp: genesisTimestamp,
+	transparentProxyBytecode, err := loadHexFile("/tmp/contracts/proxy_compiled/deployed_transparent_proxy_bytecode.txt")
+	if err != nil {
+		log.Fatalf("❌ Failed to get transparent proxy deployed bytecode: %s\n", err)
+	}
+
+	validatorMessagesBytecode, err := loadDeployedHexFromJSON("/tmp/contracts/compiled/ValidatorMessages.json", nil)
+	if err != nil {
+		log.Fatalf("❌ Failed to get validator messages deployed bytecode: %s\n", err)
+	}
+
+	poaValidatorManagerLinkRefs := map[string]string{
+		"contracts/validator-manager/ValidatorMessages.sol:ValidatorMessages": ValidatorMessagesAddress[2:],
+	}
+	poaValidatorManagerDeployedBytecode, err := loadDeployedHexFromJSON("/tmp/contracts/compiled/PoAValidatorManager.json", poaValidatorManagerLinkRefs)
+	if err != nil {
+		log.Fatalf("❌ Failed to get PoA deployed bytecode: %s\n", err)
+	}
+
+	allocation[geth_common.HexToAddress(ValidatorMessagesAddress)] = types.Account{
+		Code:    validatorMessagesBytecode,
+		Balance: big.NewInt(0),
+		Nonce:   1,
+	}
+
+	allocation[geth_common.HexToAddress(ValidatorContractAddress)] = types.Account{
+		Code:    poaValidatorManagerDeployedBytecode,
+		Balance: big.NewInt(0),
+		Nonce:   1,
+	}
+
+	allocation[geth_common.HexToAddress(ProxyAdminContractAddress)] = types.Account{
+		Balance: big.NewInt(0),
+		Code:    proxyAdminBytecode,
+		Nonce:   1,
+		Storage: map[geth_common.Hash]geth_common.Hash{
+			geth_common.HexToHash("0x0"): geth_common.HexToHash(ethAddr.String()),
 		},
 	}
 
-	subnetConfig, err := blockchainSDK.New(
-		&blockchainSDK.SubnetParams{
-			SubnetEVM: &blockchainSDK.SubnetEVMParams{
-				ChainID:     new(big.Int).SetUint64(uint64(chainID)),
-				FeeConfig:   feeConfig,
-				Allocation:  allocation,
-				Precompiles: precompiles,
-				Timestamp:   genesisTimestamp,
-			},
-			Name: subnetName,
-		})
-	if err != nil {
-		return []byte{}, fmt.Errorf("could not get balance of wallet: %v", err)
+	allocation[geth_common.HexToAddress(ProxyContractAddress)] = types.Account{
+		Balance: big.NewInt(0),
+		Code:    transparentProxyBytecode,
+		Nonce:   1,
+		Storage: map[geth_common.Hash]geth_common.Hash{
+			geth_common.HexToHash("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"): geth_common.HexToHash(ValidatorContractAddress),
+			geth_common.HexToHash("0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103"): geth_common.HexToHash(ProxyAdminContractAddress),
+		},
 	}
 
-	return subnetConfig.Genesis, nil
+	// Convert genesis to map to add warpConfig
+	genesisMap := make(map[string]interface{})
+	genesisBytes, err := json.Marshal(genesis)
+	if err != nil {
+		log.Fatalf("❌ Failed to marshal genesis to map: %s\n", err)
+	}
+	if err := json.Unmarshal(genesisBytes, &genesisMap); err != nil {
+		log.Fatalf("❌ Failed to unmarshal genesis to map: %s\n", err)
+	}
+
+	// Add warpConfig to config
+	configMap := genesisMap["config"].(map[string]interface{})
+	configMap["warpConfig"] = map[string]interface{}{
+		"blockTimestamp":               now,
+		"quorumNumerator":              67,
+		"requirePrimaryNetworkSigners": true,
+	}
+
+	genesisBytesWithWarpConfig, err := json.Marshal(genesis)
+	if err != nil {
+		log.Fatalf("❌ Failed to marshal genesis to map: %s\n", err)
+	}
+	if err := json.Unmarshal(genesisBytes, &genesisMap); err != nil {
+		log.Fatalf("❌ Failed to unmarshal genesis to map: %s\n", err)
+	}
+
+	return genesisBytesWithWarpConfig, nil
+}
+
+func loadHexFile(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	// Handle 0x prefix if present
+	if len(data) > 1 && data[0] == '0' && data[1] == 'x' {
+		data = data[2:]
+	}
+	// Trim whitespace and newlines
+	cleanData := []byte(strings.TrimSpace(string(data)))
+	return hex.DecodeString(string(cleanData))
+}
+
+type compiledJSON struct {
+	DeployedBytecode struct {
+		Object string `json:"object"`
+	} `json:"deployedBytecode"`
+}
+
+func loadDeployedHexFromJSON(path string, linkReferences map[string]string) ([]byte, error) {
+	compiled := compiledJSON{}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &compiled)
+	if err != nil {
+		return nil, err
+	}
+
+	resultHex := compiled.DeployedBytecode.Object
+
+	if linkReferences != nil {
+		for refName, address := range linkReferences {
+			if len(address) != 40 {
+				return nil, fmt.Errorf("invalid placeholder length %d, expected 40: %s", len(address), address)
+			}
+			if _, err := hex.DecodeString(address); err != nil {
+				return nil, fmt.Errorf("invalid hex in placeholder address: %s", address)
+			}
+
+			linkRefHash := crypto.Keccak256Hash([]byte(refName))
+			linkRefHashStr := linkRefHash.Hex()
+			placeholderStr := fmt.Sprintf("__$%s$__", linkRefHashStr[2:36])
+
+			fmt.Printf("Replacing %s with %s\n", placeholderStr, address)
+
+			resultHex = strings.Replace(resultHex, placeholderStr, address, -1)
+		}
+	}
+
+	if strings.Contains(resultHex, "$__") {
+		return nil, fmt.Errorf("unresolved link reference found in bytecode: %s", resultHex)
+	}
+
+	// Handle 0x prefix if present
+	if len(resultHex) > 1 && resultHex[0] == '0' && resultHex[1] == 'x' {
+		resultHex = resultHex[2:]
+	}
+
+	return hex.DecodeString(resultHex)
 }
