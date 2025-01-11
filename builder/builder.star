@@ -28,10 +28,11 @@ def init(plan, node_cfg_map):
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
         config=ServiceConfig(
-            image =ImageBuildSpec(
-                image_name="tedim52/builder:latest",
-                build_context_dir="./"
-            ),
+            # image =ImageBuildSpec(
+            #     image_name="tedim52/builder:latest",
+            #     build_context_dir="./"
+            # ),
+            image="tedim52/builder:new",
             entrypoint=["sleep", "9999999"],
             files={
                 "/tmp/node-config": node_cfg,
@@ -73,7 +74,9 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
     return genesis_data, vm_id
 
 def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
-    plan.exec(
+    # create_subnet_cmd ="cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")
+    # plan.print(create_subnet_cmd)
+    result = plan.exec(
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
@@ -81,6 +84,10 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
         )
     )
 
+    plan.print("Create output: {0}".format(result["output"]))
+
+    # add_validators_cmd = "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")
+    # plan.print(add_validators_cmd)
     plan.exec(
         description="Adding validators for {0}".format(chain_name),
         service_name = BUILDER_SERVICE_NAME,
@@ -95,6 +102,13 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
     hex_blockchain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/hexChainId.txt".format(subnet_id))
     allocations = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/allocations.txt".format(subnet_id))
     genesis_chain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/genesisChainId.txt".format(subnet_id))
+
+    plan.store_service_files(
+        service_name=BUILDER_SERVICE_NAME,
+        name="l1-configs",
+        src="/tmp/subnet/",
+        description="storing 1 configs",
+    )
 
     validator_ids = []
     for index in range (0, num_nodes):
