@@ -85,9 +85,9 @@ gas_tokens_required=10000000000000000000 # 10^19 wei = 10 eth
 
 # Download the artifacts for this release.
 teleporter_contract_address=$(curl -sL https://github.com/ava-labs/teleporter/releases/download/$teleporter_version/TeleporterMessenger_Contract_Address_$teleporter_version.txt)
-echo "TeleporterMessenger $teleporter_version contract address: $teleporter_contract_address"
+# echo "TeleporterMessenger $teleporter_version contract address: $teleporter_contract_address"
 teleporter_deployer_address=$(curl -sL https://github.com/ava-labs/teleporter/releases/download/$teleporter_version/TeleporterMessenger_Deployer_Address_$teleporter_version.txt)
-echo "TeleporterMessenger $teleporter_version deployer address: $teleporter_deployer_address"
+# echo "TeleporterMessenger $teleporter_version deployer address: $teleporter_deployer_address"
 teleporter_deploy_tx=$(curl -sL https://github.com/ava-labs/teleporter/releases/download/$teleporter_version/TeleporterMessenger_Deployment_Transaction_$teleporter_version.txt)
 teleporter_messenger_bytecode=$(curl -sL https://github.com/ava-labs/teleporter/releases/download/$teleporter_version/TeleporterMessenger_Bytecode_$teleporter_version.txt)
 if [ "$teleporter_contract_address" == "Not Found" ]; then
@@ -98,7 +98,8 @@ fi
 # Check if this TeleporterMessenger version has already been deployed on this chain.
 teleporter_contract_code=$(cast codesize $teleporter_contract_address --rpc-url $rpc_url)
 if [[ $teleporter_contract_code != "0" ]]; then
-    echo "TeleporterMessenger $teleporter_version has already been deployed on this chain." && exit 0
+    # echo "TeleporterMessenger $teleporter_version has already been deployed on this chain." && exit 0
+    echo $teleporter_contract_address
 fi
 
 # Estimate the amount of gas required to deploy the TeleporterMessenger bytecode from the Teleporter
@@ -124,7 +125,7 @@ deployer_balance=$(cast balance --rpc-url $rpc_url $teleporter_deployer_address)
 # fi
 
 # Deploy the TeleporterMessenger contract by publishing the raw Nick's method transaction.
-echo "Deploying TeleporterMessenger $teleporter_version"
+# echo "Deploying TeleporterMessenger $teleporter_version"
 deployment_result=$(cast publish --rpc-url $rpc_url $teleporter_deploy_tx)
 deployment_status=$(echo $deployment_result | jq -r .status)
 deployment_tx_id=$(echo $deployment_result | jq -r .transactionHash)
@@ -136,6 +137,6 @@ if [[ $deployment_status != "0x1" ]]; then
 fi
 
 # echo "Success! TeleporterMessenger $teleporter_version deployed to $teleporter_contract_address in transaction $deployment_tx_id."
-leporterMessenger $teleporter_version deployed to $teleporter_contract_address in transaction $deployment_tx_id."
+echo $teleporter_contract_address
 
 exit 0

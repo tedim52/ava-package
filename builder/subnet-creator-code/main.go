@@ -543,12 +543,22 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 	if err != nil {
 		fmt.Println("Failed to parse the hex value")
 	}
+	teleporterDeployerAddress, err := evm.ParseEthAddress("0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC")
+	if err != nil {
+		fmt.Println("Failed to parse the hex value")
+	}
+	// faucetAddress, err := evm.ParseEthAddress("0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC")
+	// if err != nil {
+	// 	fmt.Println("Failed to parse the hex value")
+	// }
 
 	allocation := types.GenesisAlloc{
 		// FIXME: This looks like a bug in the CLI, CLI allocates funds to a zero address here
 		// It is filled in here: https://github.com/ava-labs/avalanche-cli/blob/6debe4169dce2c64352d8c9d0d0acac49e573661/pkg/vm/evm_prompts.go#L178
-		ethAddr:           types.Account{Balance: bigIntValue},
-		txSpammerAddress:  types.Account{Balance: bigIntValue},
+		ethAddr:                   types.Account{Balance: bigIntValue},
+		txSpammerAddress:          types.Account{Balance: bigIntValue},
+		teleporterDeployerAddress: types.Account{Balance: bigIntValue},
+		// faucetAddress:             types.Account{Balance: bigIntValue},
 		otherAddress:      types.Account{Balance: bigIntValue},
 		otherAddressTwo:   types.Account{Balance: bigIntValue},
 		otherAddressThree: types.Account{Balance: bigIntValue},

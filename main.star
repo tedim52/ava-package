@@ -24,6 +24,11 @@ PK = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
 
 # TODO: add a docstring
 def run(plan, args):
+    if args.get("run-script", False) == True:
+        plan.print("h")
+        contract_deployer.deploy_teleporter_messenger(plan, "http://172.16.0.6:9650/ext/bc/2jwxRGF9C4QzZKwZZpe2VHDqw2V7W6VTTauEGCG9GriKcX7Me4/rpc", "myblockchain")
+        return
+
     node_cfg = args['node-cfg']
     networkd_id = args['node-cfg']['network-id']
     num_nodes = args['num-nodes']
@@ -73,10 +78,10 @@ def run(plan, args):
         chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"], isEtna)
 
         # teleporter messenger needs to be manually deployed on etna subnets
-        # if isEtna:
-        #     # deploy teleporter messenger contract
-        #     teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
-        #     plan.print(teleporter_messenger_address)
+        if isEtna:
+            # deploy teleporter messenger contract
+            teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
+            plan.print(teleporter_messenger_address)
 
         # deploy teleporter registry contract
         teleporter_registry_address = contract_deployer.deploy_teleporter_registry(plan, chain_info["RPCEndpointBaseURL"], chain_name)
