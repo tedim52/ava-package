@@ -13,5 +13,12 @@
             "enable-teleporter": true,
             "erc-20-token-name": "TED"
         }
-    ]
+    ],
+    "additional-services": {
+        "tx-spammer": true,
+        "observability": true,
+        "ictt-frontend": true,
+        "faucet": true,
+        "block-explorer": true
+    }
 }

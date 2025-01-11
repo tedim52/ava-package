@@ -4,5 +4,12 @@
         "network-id": "1337",
         "staking-enabled": false,
         "health-check-frequency": "5s"
+    },
+    "additional-services": {
+        "tx-spammer": true,
+        "observability": true,
+        "ictt-frontend": true,
+        "faucet": true,
+        "block-explorer": true
     }
 }

@@ -22,11 +22,13 @@ ETNA_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/do
 TX_SPAM_PK = "bcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31"
 PK = "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
 
+# TODO: add a docstring
 def run(plan, args):
     node_cfg = args['node-cfg']
     networkd_id = args['node-cfg']['network-id']
     num_nodes = args['num-nodes']
     chain_configs = args.get('chain-configs', [])
+    additional_services = args.get('additional-services', {})
 
     subnet_evm_binary_url = SUBNET_EVM_BINARY_URL
     image = DEFAULT_AVALANCHEGO_IMAGE
@@ -91,16 +93,14 @@ def run(plan, args):
         chain_info["NetworkId"] = chain["network-id"]
         l1_info[chain_name] = chain_info
 
-    # Stage 3: Launch Relayer
-    # start relayer
-    if len(l1_info) > 0:
-        relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
-
+    
     # deploy erc20 bridges
+    launch_relayer = False
     for idx, chain in enumerate(chain_configs):
         if "erc20-bridge-config" not in chain:
             continue
 
+        launch_relayer = True
         bridge_config = chain["erc20-bridge-config"]
         source_chain_name = chain["name"]
 
@@ -116,23 +116,31 @@ def run(plan, args):
             token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
             l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
 
-    # additional services:
-    observability.launch_observability(plan, node_info)
+    # Stage 3: Launch Relayer
+    # start relayer
+    if launch_relayer == True:
+        relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
-    if len(l1_info) >= 2:
+    # additional services:
+    if additional_services["observability"] == True:
+        observability.launch_observability(plan, node_info)
+
+    if additional_services["ictt-frontend"] == True and len(l1_info) >= 2:
         bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
     
     c = 0
     for chain_name, chain in l1_info.items():
-        # launch tx spammer for this chain
-        tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], TX_SPAM_PK, chain_name)
+        if additional_services["tx-spammer"] = True:
+            # launch tx spammer for this chain
+            tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], TX_SPAM_PK, chain_name)
 
-        # launch block explorer for this chain
-        blockscout_frontend_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"], c)
-        l1_info[chain_name]["PublicExplorerUrl"] = blockscout_frontend_url
+        if additional_services["block-explorer"] = True:
+            # launch block explorer for this chain
+            blockscout_frontend_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"], c)
+            l1_info[chain_name]["PublicExplorerUrl"] = blockscout_frontend_url
         c += 1
 
-    if len(l1_info) > 0:
+    if additional_services["faucet"] == True and len(l1_info) > 0:
         faucet.launch_faucet(plan, l1_info, "0x{0}".format(PK))
 
     return l1_info

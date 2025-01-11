@@ -14,5 +14,12 @@
             "erc-20-token-name": "TED",
             "etna": true
         }
-    ]
+    ],
+    "additional-services": {
+        "tx-spammer": false,
+        "observability": false,
+        "ictt-frontend": false,
+        "faucet": false,
+        "block-explorer": false
+    }
 }
