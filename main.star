@@ -130,11 +130,11 @@ def run(plan, args):
     
     c = 0
     for chain_name, chain in l1_info.items():
-        if additional_services["tx-spammer"] = True:
+        if additional_services["tx-spammer"] == True:
             # launch tx spammer for this chain
             tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], TX_SPAM_PK, chain_name)
 
-        if additional_services["block-explorer"] = True:
+        if additional_services["block-explorer"] == True:
             # launch block explorer for this chain
             blockscout_frontend_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"], c)
             l1_info[chain_name]["PublicExplorerUrl"] = blockscout_frontend_url
