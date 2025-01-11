@@ -1,5 +1,4 @@
 {
-    "run-script": false,
     "num-nodes": 2,
     "node-cfg": {
         "network-id": "1337",
