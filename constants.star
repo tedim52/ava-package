@@ -1,4 +1,5 @@
-DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
+# DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
+DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.12.0-fuji"
 
 ETNA_DEVNET_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.12.0-fuji"
 

@@ -16,7 +16,7 @@ block_explorer = import_module('./block-explorer/block-explorer.star')
 # TODO: add a docstring
 def run(plan, args):
     node_cfg = args['node-cfg']
-    networkd_id = args['node-cfg']['network-id']
+    network_id = args['node-cfg']['network-id']
     num_nodes = args['num-nodes']
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
@@ -41,11 +41,15 @@ def run(plan, args):
     builder.init(plan, node_cfg)
 
     # generate genesis for primary network (p-chain, x-chain, c-chain)
-    genesis, subnet_evm_id = builder.generate_genesis(plan, networkd_id, num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
+    if network_id == "fuji": # dont need to generate a genesis if connecting to fuji
+        genesis, subnet_evm_id = builder.generate_genesis(plan, "1337", num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
+    else:
+        genesis, subnet_evm_id = builder.generate_genesis(plan, network_id, num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
 
     # start avalanche node network
     node_info, bootnode_name = node_launcher.launch(
         plan,
+        network_id,
         genesis,
         image,
         num_nodes,

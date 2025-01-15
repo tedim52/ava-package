@@ -16,6 +16,7 @@ NODE_NAME_PREFIX = "node-"
 
 def launch(
     plan, 
+    network_id,
     genesis, 
     image, 
     node_count,  
@@ -33,12 +34,13 @@ def launch(
         node_name = NODE_NAME_PREFIX + str(index)
 
         node_data_dirpath = ABS_DATA_DIRPATH + node_name
+        
+
         node_config_filepath = node_data_dirpath + "/config.json"
 
         launch_node_cmd = [
-            "nohup",
+            # "nohup",
             "/avalanchego/build/" + EXECUTABLE_PATH,
-            "--genesis-file=/tmp/data/genesis.json",
             "--data-dir=" + node_data_dirpath,
             "--config-file=" + node_config_filepath,
             "--http-host=0.0.0.0",
@@ -47,6 +49,8 @@ def launch(
             "--log-dir=/tmp/",
             "--network-health-min-conn-peers=" + str(node_count - 1),
         ]
+        if network_id != "fuji":
+            launch_node_cmd.append("--genesis-file=/tmp/data/genesis.json")
 
         plan.print("Creating node {0} with command {1}".format(node_name, launch_node_cmd))
 
@@ -54,17 +58,20 @@ def launch(
         public_ports["rpc"] = PortSpec(number=RPC_PORT_NUM + index * 2, transport_protocol="TCP", wait=None)
         public_ports["staking"] = PortSpec(number=STAKING_PORT_NUM + index * 2, transport_protocol="TCP", wait=None)
 
-        log_files = ["main.log", "C.log", "X.log", "P.log", "vm-factory.log"]
+        # log_files = ["main.log", "C.log", "X.log", "P.log", "vm-factory.log"]
+        log_files = ["main.log"]
         log_files_cmds = ["touch /tmp/{0}".format(log_file) for log_file in log_files]
         log_file_cmd = " && ".join(log_files_cmds)
 
-        node_files = {
-            "/tmp/data": genesis
-        }
+        if genesis != "": 
+            node_files = {
+                "/tmp/data": genesis
+            }
 
         node_service_config = ServiceConfig(
             image=image,
-            entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
+            # entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
+            entrypoint=["/bin/sh", "-c", " ".join(launch_node_cmd)],
             ports={
                 "rpc": PortSpec(number=9650, transport_protocol="TCP", wait=None),
                 "staking": PortSpec(number=9651, transport_protocol="TCP", wait=None)
@@ -98,13 +105,13 @@ def launch(
         if custom_subnet_vm_url:
             download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
-        plan.exec(
-            description="Restarting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
-            service_name=node_name,
-            recipe=ExecRecipe(
-                command=["/bin/sh", "-c", " ".join(launch_node_cmd) + " >/dev/null 2>&1 &"],
-            )
-        )
+        # plan.exec(
+        #     description="Restarting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
+        #     service_name=node_name,
+        #     recipe=ExecRecipe(
+        #         command=["/bin/sh", "-c", " ".join(launch_node_cmd) + " >/dev/null 2>&1 &"],
+        #     )
+        # )
 
         bootstrap_ips.append("{0}:{1}".format(node.ip_address, 9651))
         bootstrap_id_file = NODE_ID_PATH.format(index)
@@ -117,11 +124,7 @@ def launch(
             "launch-command": launch_node_cmd,
         }
 
-    wait_for_health(plan, "node-" + str(node_count - 1))
-
-    # public_rpc_urls = []
-    # public_rpc_urls = ["http://{0}:{1}".format(PUBLIC_IP, RPC_PORT_NUM + index * 2) for index, node in
-    #                        enumerate(nodes)]
+    # wait_for_health(plan, "node-" + str(node_count - 1))
 
     return node_info, NODE_NAME_PREFIX + "0"
 
@@ -208,10 +211,4 @@ def download_to_path_and_untar(plan, node_name, url, dest):
         recipe=ExecRecipe(
             command=["/bin/sh", "-c", "mv /static_files/subnet-evm {0}".format(dest)]
         )
-    )    
-
-
-
-
-
-
+    )

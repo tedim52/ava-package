@@ -1,0 +1,15 @@
+{
+    "num-nodes": 1,
+    "node-cfg": {
+        "network-id": "fuji",
+        "staking-enabled": false,
+        "health-check-frequency": "5s"
+    },
+    "additional-services": {
+        "tx-spammer": false,
+        "observability": true,
+        "ictt-frontend": false,
+        "faucet": false,
+        "block-explorer": false
+    }
+}
