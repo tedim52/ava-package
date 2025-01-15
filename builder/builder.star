@@ -28,11 +28,10 @@ def init(plan, node_cfg_map):
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
         config=ServiceConfig(
-            # image =ImageBuildSpec(
-            #     image_name="tedim52/builder:latest",
-            #     build_context_dir="./"
-            # ),
-            image="tedim52/builder:new",
+            image =ImageBuildSpec(
+                image_name="tedim52/builder:latest",
+                build_context_dir="./"
+            ),
             entrypoint=["sleep", "9999999"],
             files={
                 "/tmp/node-config": node_cfg,

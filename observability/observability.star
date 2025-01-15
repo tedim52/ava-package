@@ -19,7 +19,7 @@ def launch_observability(plan, node_info):
     node_exporter = plan.add_service(
         name="node-exporter",
         config=ServiceConfig(
-            image="tedim52/node-exporter",
+            image="tedim52/node-exporter:latest",
             cmd=["/bin/sh", "-c", "./node_exporter"],
             ports={
                 "node-exporter": PortSpec(

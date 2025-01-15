@@ -1,8 +1,8 @@
+TX_SPAM_PK = "bcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31"
 
 def spam_transactions(
     plan,
     node_uri,
-    private_key,
     chain_name,
 ):
     plan.add_service(
@@ -12,7 +12,7 @@ def spam_transactions(
             cmd = [
                 "spam",
                 "--rpc={0}".format(node_uri),
-                "--sk={0}".format(private_key),
+                "--sk={0}".format(TX_SPAM_PK),
             ],
         )
     )

@@ -1,6 +1,7 @@
+# TODO: use a separate key than contract deployer key
+FAUCET_PK = "0x56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
 
-
-def launch_faucet(plan, chain_info, funded_private_key):
+def launch_faucet(plan, chain_info):
     evm_chain_info, erc_20_tokens = get_faucet_cfg_info(chain_info)
 
     config_file_tmpl = read_file(src="./config.json.tmpl")
@@ -25,7 +26,7 @@ def launch_faucet(plan, chain_info, funded_private_key):
                 "/avalanche-faucet/config/": config_file_artifact,
             },
             env_vars={
-                "PK": funded_private_key,
+                "PK": FAUCET_PK,
                 "CAPTCHA_SECRET": "Google ReCaptcha V3 Secret",
                 "NODE_ENV": "development",
             },
