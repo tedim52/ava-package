@@ -5,11 +5,7 @@
         "staking-enabled": false,
         "health-check-frequency": "5s"
     },
-    "additional-services": {
-        "tx-spammer": false,
-        "observability": true,
-        "ictt-frontend": false,
-        "faucet": false,
-        "block-explorer": false
+    "additional_services": {
+        "observability": true
     }
 }

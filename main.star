@@ -19,7 +19,7 @@ def run(plan, args):
     network_id = args['node-cfg']['network-id']
     num_nodes = args['num-nodes']
     chain_configs = args.get('chain-configs', [])
-    additional_services = args.get('additional-services', {})
+    additional_services = args.get('additional_services', {})
 
     subnet_evm_binary_url = constants.SUBNET_EVM_BINARY_URL
     image = constants.DEFAULT_AVALANCHEGO_IMAGE
@@ -41,7 +41,7 @@ def run(plan, args):
     builder.init(plan, node_cfg)
 
     # generate genesis for primary network (p-chain, x-chain, c-chain)
-    if network_id == "fuji": # dont need to generate a genesis if connecting to fuji
+    if network_id == constants.FUJI_NETWORK_ID: # dont need to generate a genesis if connecting to fuji
         genesis, subnet_evm_id = builder.generate_genesis(plan, "1337", num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
     else:
         genesis, subnet_evm_id = builder.generate_genesis(plan, network_id, num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
@@ -109,23 +109,23 @@ def run(plan, args):
         relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
     # additional services:
-    if additional_services["observability"] == True:
+    if additional_services.get("observability", False) == True:
         observability.launch_observability(plan, node_info)
 
-    if additional_services["ictt-frontend"] == True and len(l1_info) >= 2 and launch_relayer == True:
+    if additional_services.get("ictt-frontend", False) == True and len(l1_info) >= 2 and launch_relayer == True:
         bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
     
     c = 0
     for chain_name, chain in l1_info.items():
-        if additional_services["tx-spammer"] == True:
+        if additional_services.get("tx-spammer", False) == True:
             tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], chain_name)
 
-        if additional_services["block-explorer"] == True:
+        if additional_services.get("block-explorer", False) == True:
             blockscout_frontend_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"], c)
             l1_info[chain_name]["PublicExplorerUrl"] = blockscout_frontend_url
         c += 1
 
-    if additional_services["faucet"] == True and len(l1_info) > 0:
+    if additional_services.get("faucet", False) == True and len(l1_info) > 0:
         faucet.launch_faucet(plan, l1_info)
 
     return l1_info

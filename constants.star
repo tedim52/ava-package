@@ -10,3 +10,7 @@ AMD64_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/d
 ETNA_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.12/subnet-evm_0.6.12_linux_arm64.tar.gz"
 
 DEFAULT_VM_NAME = "subnetevm"
+
+FUJI_NETWORK_ID = "fuji"
+
+LOCAL_NETWORK_ID = "1337"
