@@ -20,15 +20,16 @@ def run(plan, args):
     num_nodes = args['num-nodes']
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
+    cpu_arch = args.get('cpu-arch', "amd64")
 
     subnet_evm_binary_url = constants.SUBNET_EVM_BINARY_URL
     image = constants.DEFAULT_AVALANCHEGO_IMAGE
-    cpu_arch_result = plan.run_sh(
-        description="Determining CPU system architecture",
-        run="uname -m | tr -d '\n'",
-    )
-    cpu_arch = cpu_arch_result.output
-    if cpu_arch == "amd64":
+    # cpu_arch_result = plan.run_sh(
+    #     description="Determining CPU system architecture",
+    #     run="uname -m | tr -d '\n'",
+    # )
+    # cpu_arch = cpu_arch_result.output
+    if cpu_arch == "amd64" or cpu_arch == "x86_64":
        subnet_evm_binary_url = constants.AMD64_SUBNET_EVM_BINARY_URL
 
     useEtnaAssets = False
