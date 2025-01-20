@@ -23,7 +23,6 @@ def launch(
     node_count,  
     vmId, 
     custom_subnet_vm_url):
-
     bootstrap_ips = []
     bootstrap_ids = []
     nodes = []
@@ -48,7 +47,10 @@ def launch(
             "--staking-port=" + str(STAKING_PORT_NUM),
             "--http-port=" + str(RPC_PORT_NUM),
             "--log-dir=/tmp/",
-            "--network-health-min-conn-peers=" + str(node_count - 1),
+            # "--bootstrap-ips=127.0.0.1:9651",
+            # "--bootstrap-ids={0}".format(bootstrap_id),
+            "--network-health-min-conn-peers=1",
+            # "--network-health-min-conn-peers=" + str(node_count - 1),
         ]
 
         if network_id != constants.FUJI_NETWORK_ID:
@@ -72,10 +74,11 @@ def launch(
 
         node_service_config = ServiceConfig(
             image=image,
+            # entrypoint=["/bin/sh", "-c", " ".join(launch_node_cmd)],
             entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
             ports={
-                "rpc": PortSpec(number=9650, transport_protocol="TCP", wait=None),
-                "staking": PortSpec(number=9651, transport_protocol="TCP", wait=None)
+                "rpc": PortSpec(number=RPC_PORT_NUM, transport_protocol="TCP", wait=None),
+                "staking": PortSpec(number=STAKING_PORT_NUM, transport_protocol="TCP", wait=None)
             },
             files=node_files,
             public_ports=public_ports,
@@ -114,9 +117,10 @@ def launch(
             )
         )
 
-        bootstrap_ips.append("{0}:{1}".format(node.ip_address, 9651))
+        bootstrap_ips.append("{0}:{1}".format(node.ip_address, STAKING_PORT_NUM))
+
         bootstrap_id_file = NODE_ID_PATH.format(index)
-        bootstrap_id = utils.read_file_from_service(plan, "builder", bootstrap_id_file)
+        bootstrap_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, bootstrap_id_file)
         bootstrap_ids.append(bootstrap_id)
 
         node_info[node_name] = {
