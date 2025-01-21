@@ -1,0 +1,11 @@
+{
+    "num-nodes": 1,
+    "node-cfg": {
+        "network-id": "1337",
+        "staking-enabled": false,
+        "health-check-frequency": "5s"
+    },
+    "additional-services": {
+        "observability": true
+    }
+}

@@ -1,5 +1,6 @@
 builder = import_module("./builder/builder.star")
 utils = import_module("./utils.star")
+constants = import_module("./constants.star")
 
 NODE_ID_PATH = "/tmp/data/node-{0}/node_id.txt"
 BUILDER_SERVICE_NAME = "builder"
@@ -16,12 +17,12 @@ NODE_NAME_PREFIX = "node-"
 
 def launch(
     plan, 
+    network_id,
     genesis, 
     image, 
     node_count,  
     vmId, 
     custom_subnet_vm_url):
-
     bootstrap_ips = []
     bootstrap_ids = []
     nodes = []
@@ -33,12 +34,13 @@ def launch(
         node_name = NODE_NAME_PREFIX + str(index)
 
         node_data_dirpath = ABS_DATA_DIRPATH + node_name
+        
+
         node_config_filepath = node_data_dirpath + "/config.json"
 
         launch_node_cmd = [
             "nohup",
             "/avalanchego/build/" + EXECUTABLE_PATH,
-            "--genesis-file=/tmp/data/genesis.json",
             "--data-dir=" + node_data_dirpath,
             "--config-file=" + node_config_filepath,
             "--http-host=0.0.0.0",
@@ -48,6 +50,9 @@ def launch(
             "--network-health-min-conn-peers=" + str(node_count - 1),
         ]
 
+        if network_id != constants.FUJI_NETWORK_ID:
+            launch_node_cmd.append("--genesis-file=/tmp/data/genesis.json")
+
         plan.print("Creating node {0} with command {1}".format(node_name, launch_node_cmd))
 
         public_ports = {}
@@ -55,19 +60,21 @@ def launch(
         public_ports["staking"] = PortSpec(number=STAKING_PORT_NUM + index * 2, transport_protocol="TCP", wait=None)
 
         log_files = ["main.log", "C.log", "X.log", "P.log", "vm-factory.log"]
+        log_files = ["main.log"]
         log_files_cmds = ["touch /tmp/{0}".format(log_file) for log_file in log_files]
         log_file_cmd = " && ".join(log_files_cmds)
 
-        node_files = {
-            "/tmp/data": genesis
-        }
+        if genesis != "": 
+            node_files = {
+                "/tmp/data": genesis
+            }
 
         node_service_config = ServiceConfig(
             image=image,
             entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
             ports={
-                "rpc": PortSpec(number=9650, transport_protocol="TCP", wait=None),
-                "staking": PortSpec(number=9651, transport_protocol="TCP", wait=None)
+                "rpc": PortSpec(number=RPC_PORT_NUM, transport_protocol="TCP", wait=None),
+                "staking": PortSpec(number=STAKING_PORT_NUM, transport_protocol="TCP", wait=None)
             },
             files=node_files,
             public_ports=public_ports,
@@ -106,9 +113,10 @@ def launch(
             )
         )
 
-        bootstrap_ips.append("{0}:{1}".format(node.ip_address, 9651))
+        bootstrap_ips.append("{0}:{1}".format(node.ip_address, STAKING_PORT_NUM))
+
         bootstrap_id_file = NODE_ID_PATH.format(index)
-        bootstrap_id = utils.read_file_from_service(plan, "builder", bootstrap_id_file)
+        bootstrap_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, bootstrap_id_file)
         bootstrap_ids.append(bootstrap_id)
 
         node_info[node_name] = {
@@ -117,11 +125,8 @@ def launch(
             "launch-command": launch_node_cmd,
         }
 
-    wait_for_health(plan, "node-" + str(node_count - 1))
-
-    # public_rpc_urls = []
-    # public_rpc_urls = ["http://{0}:{1}".format(PUBLIC_IP, RPC_PORT_NUM + index * 2) for index, node in
-    #                        enumerate(nodes)]
+    if network_id != constants.FUJI_NETWORK_ID:
+        wait_for_health(plan, "node-" + str(node_count - 1)) 
 
     return node_info, NODE_NAME_PREFIX + "0"
 
@@ -208,10 +213,4 @@ def download_to_path_and_untar(plan, node_name, url, dest):
         recipe=ExecRecipe(
             command=["/bin/sh", "-c", "mv /static_files/subnet-evm {0}".format(dest)]
         )
-    )    
-
-
-
-
-
-
+    )
