@@ -42,10 +42,7 @@ def get_subnet_evm_url(plan, chain_configs):
         return constants.SUBNET_EVM_BINARY_URL_FMT_STR.format(cpu_arch)
 
 def get_avalanchego_img(chain_configs):
-    if contains_etna_l1(chain_configs):
-        return constants.ETNA_DEVNET_AVALANCHEGO_IMAGE
-    else:
-        return constants.DEFAULT_AVALANCHEGO_IMAGE
+    return constants.ETNA_DEVNET_AVALANCHEGO_IMAGE
 
 def contains_etna_l1(chain_configs):
     for chain in chain_configs:

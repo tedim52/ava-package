@@ -5,7 +5,7 @@
         "staking-enabled": false,
         "health-check-frequency": "5s"
     },
-    "additional_services": {
+    "additional-services": {
         "observability": true
     }
 }
