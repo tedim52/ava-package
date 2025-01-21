@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -74,11 +75,14 @@ const (
 	allocationDelimiter = ","
 	addrAllocDelimiter  = "="
 
-	ValidatorContractAddress  = "0xC0DEBA5E00000000000000000000000000000000"
-	ProxyAdminContractAddress = "0xC0FFEE1234567890aBcDEF1234567890AbCdEf34"
-	ProxyContractAddress      = "0xFEEDC0DE0000000000000000000000000000000"
-	RewardCalculatorAddress   = "0xDEADC0DE00000000000000000000000000000000"
-	ValidatorMessagesAddress  = "0xca11ab1e00000000000000000000000000000000"
+	HelperAddressesBalanceHexValue = "ffff86ac351052600000"
+	TeleporterDeployerAddress      = "0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC"
+	TxSpammerAddress               = "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC"
+	ValidatorContractAddress       = "0xC0DEBA5E00000000000000000000000000000000"
+	ProxyAdminContractAddress      = "0xC0FFEE1234567890aBcDEF1234567890AbCdEf34"
+	ProxyContractAddress           = "0xFEEDC0DE0000000000000000000000000000000"
+	RewardCalculatorAddress        = "0xDEADC0DE00000000000000000000000000000000"
+	ValidatorMessagesAddress       = "0xca11ab1e00000000000000000000000000000000"
 )
 
 type wallet struct {
@@ -107,7 +111,7 @@ var (
 
 func main() {
 	if len(os.Args) < minArgs {
-		fmt.Printf("Need at least '%v' args got '%v'\n", minArgs, len(os.Args))
+		fmt.Printf("need at least '%v' args got '%v'\n", minArgs, len(os.Args))
 		os.Exit(nonZeroExitCode)
 	}
 
@@ -117,7 +121,7 @@ func main() {
 	numValidatorNodesArg := os.Args[numValidatorNodesIndex]
 	numValidatorNodes, err := strconv.Atoi(numValidatorNodesArg)
 	if err != nil {
-		fmt.Printf("An error occurred while converting numValidatorNodes arg to integer: %v\n", err)
+		fmt.Printf("an error occurred while converting numValidatorNodes arg to integer: %v\n", err)
 		os.Exit(nonZeroExitCode)
 	}
 	isEtnaSubnetArg := os.Args[isEtnaSubnetIndex]
@@ -128,13 +132,13 @@ func main() {
 	l1NumArg := os.Args[l1CounterIndex]
 	l1Num, err := strconv.Atoi(l1NumArg)
 	if err != nil {
-		fmt.Printf("An error occurred while converting l1Num arg to integer: %v\n", err)
+		fmt.Printf("an error occurred while converting l1Num arg to integer: %v\n", err)
 		os.Exit(nonZeroExitCode)
 	}
 	chainIdArg := os.Args[chainIdIndex]
 	chainId, err := strconv.Atoi(chainIdArg)
 	if err != nil {
-		fmt.Printf("An error occurred while converting chain id arg to integer: %v\n", err)
+		fmt.Printf("an error occurred while converting chain id arg to integer: %v\n", err)
 		os.Exit(nonZeroExitCode)
 	}
 
@@ -174,12 +178,12 @@ func main() {
 			genesisJson := make(map[string]interface{})
 			err = json.Unmarshal(genesisData, &genesisJson)
 			if err != nil {
-				fmt.Print("err")
+				fmt.Printf("an error occurred unmarshaling etna subnet genesis data into map:\n%v", genesisData)
 				os.Exit(nonZeroExitCode)
 			}
 			genesisJsonFile, err = json.MarshalIndent(genesisJson, "", "  ")
 			if err != nil {
-				fmt.Print("err")
+				fmt.Printf("an error occurred marshaling etna subnet genesis map into formatted json:\n%v", genesisJson)
 				os.Exit(nonZeroExitCode)
 			}
 		} else {
@@ -236,7 +240,9 @@ func main() {
 		}
 	default:
 		fmt.Println("Operation not supported.")
+		os.Exit(nonZeroExitCode)
 	}
+	os.Exit(0)
 }
 
 func writeCreateOutputs(subnetId ids.ID, vmId ids.ID, blockchainId ids.ID, hexChainId string, genesisChainId string, allocations map[string]string, l1Num int, genesisJsonFile string) error {
@@ -475,61 +481,60 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 		BlockGasCostStep:         big.NewInt(200000),
 	}
 
-	hexValue := "ffff86ac351052600000"
-	bigIntValue := new(big.Int)
-	_, success := bigIntValue.SetString(hexValue, 16)
-	if !success {
-		fmt.Println("Failed to parse the hex value")
+	helperAddressesBalanceBigIntValue := new(big.Int)
+	_, isSuccess := helperAddressesBalanceBigIntValue.SetString(HelperAddressesBalanceHexValue, 16)
+	if !isSuccess {
+		return []byte{}, errors.New("failed to parse hex value for funding helper addresses")
 	}
 
-	txSpammerAddress, err := evm.ParseEthAddress("8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC")
+	txSpammerAddress, err := evm.ParseEthAddress(TxSpammerAddress)
 	if err != nil {
-		fmt.Println("Failed to parse the hex value")
+		return []byte{}, fmt.Errorf("failed to parse eth address for tx spammer address: %v\n%v", TxSpammerAddress, err.Error())
 	}
 
-	// TODO: what r these two addresses doing?
+	teleporterDeployerAddress, err := evm.ParseEthAddress(TeleporterDeployerAddress)
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to parse eth address for teleporter deployer address: %v\n%v", TeleporterDeployerAddress, err.Error())
+	}
+
 	otherAddress, err := evm.ParseEthAddress("8943545177806ED17B9F23F0a21ee5948eCaa776")
 	if err != nil {
-		fmt.Println("Failed to parse the hex value")
+		return []byte{}, fmt.Errorf("failed to parse eth address: %v\n%v", "8943545177806ED17B9F23F0a21ee5948eCaa776", err.Error())
 	}
 	otherAddressTwo, err := evm.ParseEthAddress("78af694930E98D18AB69C04E57071850d8Aa05dC")
 	if err != nil {
-		fmt.Println("Failed to parse the hex value")
+		return []byte{}, fmt.Errorf("failed to parse eth address: %v\n%v", "78af694930E98D18AB69C04E57071850d8Aa05dC", err.Error())
 	}
 	otherAddressThree, err := evm.ParseEthAddress("8d6699fe55244cb471837f3f80e602d0ccf2665e")
 	if err != nil {
-		fmt.Println("Failed to parse the hex value")
-	}
-	teleporterDeployerAddress, err := evm.ParseEthAddress("0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC")
-	if err != nil {
-		fmt.Println("Failed to parse the hex value")
+		return []byte{}, fmt.Errorf("failed to parse eth address: %v\n%v", "8d6699fe55244cb471837f3f80e602d0ccf2665e", err.Error())
 	}
 
 	allocation := types.GenesisAlloc{
 		// FIXME: This looks like a bug in the CLI, CLI allocates funds to a zero address here
 		// It is filled in here: https://github.com/ava-labs/avalanche-cli/blob/6debe4169dce2c64352d8c9d0d0acac49e573661/pkg/vm/evm_prompts.go#L178
-		ethAddr:                   types.Account{Balance: bigIntValue},
-		txSpammerAddress:          types.Account{Balance: bigIntValue},
-		teleporterDeployerAddress: types.Account{Balance: bigIntValue},
-		otherAddress:              types.Account{Balance: bigIntValue},
-		otherAddressTwo:           types.Account{Balance: bigIntValue},
-		otherAddressThree:         types.Account{Balance: bigIntValue},
+		ethAddr:                   types.Account{Balance: helperAddressesBalanceBigIntValue},
+		txSpammerAddress:          types.Account{Balance: helperAddressesBalanceBigIntValue},
+		teleporterDeployerAddress: types.Account{Balance: helperAddressesBalanceBigIntValue},
+		otherAddress:              types.Account{Balance: helperAddressesBalanceBigIntValue},
+		otherAddressTwo:           types.Account{Balance: helperAddressesBalanceBigIntValue},
+		otherAddressThree:         types.Account{Balance: helperAddressesBalanceBigIntValue},
 	}
 
 	// add contracts needed for etna
 	proxyAdminBytecode, err := loadHexFile(fmt.Sprintf("%v/proxy_compiled/deployed_proxy_admin_bytecode.txt", etnaContractsPath))
 	if err != nil {
-		log.Fatalf("❌ Failed to get proxy admin deployed bytecode: %s\n", err)
+		return []byte{}, fmt.Errorf("failed to load hex file for proxy admin bytecode: %s", err.Error())
 	}
 
 	transparentProxyBytecode, err := loadHexFile(fmt.Sprintf("%v/proxy_compiled/deployed_transparent_proxy_bytecode.txt", etnaContractsPath))
 	if err != nil {
-		log.Fatalf("❌ Failed to get transparent proxy deployed bytecode: %s\n", err)
+		return []byte{}, fmt.Errorf("failed to load hex file for transparent proxy bytecode: %s", err.Error())
 	}
 
 	validatorMessagesBytecode, err := loadDeployedHexFromJSON(fmt.Sprintf("%v/compiled/ValidatorMessages.json", etnaContractsPath), nil)
 	if err != nil {
-		log.Fatalf("❌ Failed to get validator messages deployed bytecode: %s\n", err)
+		return []byte{}, fmt.Errorf("failed to load hex file from json for validator messages bytecode: %s", err.Error())
 	}
 
 	poaValidatorManagerLinkRefs := map[string]string{
@@ -537,7 +542,7 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 	}
 	poaValidatorManagerDeployedBytecode, err := loadDeployedHexFromJSON(fmt.Sprintf("%v/compiled/PoAValidatorManager.json", etnaContractsPath), poaValidatorManagerLinkRefs)
 	if err != nil {
-		log.Fatalf("❌ Failed to get PoA deployed bytecode: %s\n", err)
+		return []byte{}, fmt.Errorf("failed to load hex file from json for poa validator manager bytecode: %s", err.Error())
 	}
 
 	allocation[geth_common.HexToAddress(ValidatorMessagesAddress)] = types.Account{
@@ -593,17 +598,18 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 		Timestamp:  uint64(now),
 	}
 
-	// Convert genesis to map to add warpConfig
-	genesisMap := make(map[string]interface{})
 	genesisBytes, err := json.Marshal(genesis)
 	if err != nil {
-		log.Fatalf("❌ Failed to marshal genesis to map: %s\n", err)
-	}
-	if err := json.Unmarshal(genesisBytes, &genesisMap); err != nil {
-		log.Fatalf("❌ Failed to unmarshal genesis to map: %s\n", err)
+		return []byte{}, fmt.Errorf("failed to marshal genesis to bytes: %s", err.Error())
 	}
 
-	// Add warpConfig to config
+	// convert genesis to map to add warpConfig
+	genesisMap := make(map[string]interface{})
+	if err := json.Unmarshal(genesisBytes, &genesisMap); err != nil {
+		return []byte{}, fmt.Errorf("failed to unmarshal genesis bytes to map: %s", err.Error())
+	}
+
+	// add warpConfig to config
 	configMap := genesisMap["config"].(map[string]interface{})
 	configMap["warpConfig"] = map[string]interface{}{
 		"blockTimestamp":               now,
@@ -613,10 +619,7 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 
 	genesisBytesWithWarpConfig, err := json.Marshal(genesisMap)
 	if err != nil {
-		log.Fatalf("❌ Failed to marshal genesis to map: %s\n", err)
-	}
-	if err := json.Unmarshal(genesisBytesWithWarpConfig, &genesisMap); err != nil {
-		log.Fatalf("❌ Failed to unmarshal genesis to map: %s\n", err)
+		return []byte{}, fmt.Errorf("failed to unmarshal genesis map with warp config: %s", err.Error())
 	}
 
 	return genesisBytesWithWarpConfig, nil
