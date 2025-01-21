@@ -39,7 +39,7 @@ def launch(
         node_config_filepath = node_data_dirpath + "/config.json"
 
         launch_node_cmd = [
-            # "nohup",
+            "nohup",
             "/avalanchego/build/" + EXECUTABLE_PATH,
             "--data-dir=" + node_data_dirpath,
             "--config-file=" + node_config_filepath,
@@ -47,10 +47,7 @@ def launch(
             "--staking-port=" + str(STAKING_PORT_NUM),
             "--http-port=" + str(RPC_PORT_NUM),
             "--log-dir=/tmp/",
-            # "--bootstrap-ips=127.0.0.1:9651",
-            # "--bootstrap-ids={0}".format(bootstrap_id),
-            "--network-health-min-conn-peers=1",
-            # "--network-health-min-conn-peers=" + str(node_count - 1),
+            "--network-health-min-conn-peers=" + str(node_count - 1),
         ]
 
         if network_id != constants.FUJI_NETWORK_ID:
@@ -74,7 +71,6 @@ def launch(
 
         node_service_config = ServiceConfig(
             image=image,
-            # entrypoint=["/bin/sh", "-c", " ".join(launch_node_cmd)],
             entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
             ports={
                 "rpc": PortSpec(number=RPC_PORT_NUM, transport_protocol="TCP", wait=None),

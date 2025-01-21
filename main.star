@@ -19,27 +19,15 @@ def run(plan, args):
     network_id = args['node-cfg']['network-id']
     num_nodes = args['num-nodes']
     chain_configs = args.get('chain-configs', [])
-    additional_services = args.get('additional_services', {})
-
-    subnet_evm_binary_url = constants.SUBNET_EVM_BINARY_URL
-    image = constants.DEFAULT_AVALANCHEGO_IMAGE
-    cpu_arch_result = plan.run_sh(
-        description="Determining CPU system architecture",
-        run="uname -m | tr -d '\n'",
-    )
-    cpu_arch = cpu_arch_result.output
-    if cpu_arch == "amd64":
-       subnet_evm_binary_url = constants.AMD64_SUBNET_EVM_BINARY_URL
-
-    useEtnaAssets = False
-    if contains_etna_l1(chain_configs):
-        useEtnaAssets = True
-        image = constants.ETNA_DEVNET_AVALANCHEGO_IMAGE 
-        subnet_evm_binary_url = constants.ETNA_SUBNET_EVM_BINARY_URL
+    additional_services = args.get('additional-services', {})
+    
+    subnet_evm_binary_url = utils.get_subnet_evm_url(plan, chain_configs)
+    avalanche_go_image = utils.get_avalanchego_img(chain_configs)
 
     # create builder, responsible for scripts to generate genesis, create subnets, create blockchains
     builder.init(plan, node_cfg)
 
+    # TODO: make it so if its fuji, generate_genesis does not run
     # generate genesis for primary network (p-chain, x-chain, c-chain)
     if network_id == constants.FUJI_NETWORK_ID: # dont need to generate a genesis if connecting to fuji
         genesis, subnet_evm_id = builder.generate_genesis(plan, "1337", num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
@@ -51,7 +39,7 @@ def run(plan, args):
         plan,
         network_id,
         genesis,
-        image,
+        avalanche_go_image,
         num_nodes,
         subnet_evm_id,
         subnet_evm_binary_url
@@ -64,7 +52,7 @@ def run(plan, args):
         isEtna = chain.get('etna', False)
         chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"], isEtna)
 
-        # teleporter messenger needs to be manually deployed on etna subnets
+        # teleporter messenger needs to be manually deployed on etna l1s
         if isEtna:
             teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
             plan.print(teleporter_messenger_address)
@@ -129,9 +117,3 @@ def run(plan, args):
         faucet.launch_faucet(plan, l1_info)
 
     return l1_info
-   
-def contains_etna_l1(chain_configs):
-    for chain in chain_configs:
-        if chain.get("etna") == True:
-            return True
-    return False
