@@ -73,8 +73,6 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
     return genesis_data, vm_id
 
 def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
-    # create_subnet_cmd ="cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")
-    # plan.print(create_subnet_cmd)
     result = plan.exec(
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = BUILDER_SERVICE_NAME,
@@ -85,8 +83,6 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
 
     plan.print("Create output: {0}".format(result["output"]))
 
-    # add_validators_cmd = "cd {0} && go run main.go {1} {2} {3} {4} {5} {6} {7} {8}".format(builder.SUBNET_CREATION_CODE_PATH, uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")
-    # plan.print(add_validators_cmd)
     plan.exec(
         description="Adding validators for {0}".format(chain_name),
         service_name = BUILDER_SERVICE_NAME,

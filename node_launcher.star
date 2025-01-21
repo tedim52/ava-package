@@ -66,7 +66,7 @@ def launch(
                 "/tmp/data": genesis
             }
 
-        entrypoint=""
+        entrypoint=[]
         if network_id == "fuji":
             entrypoint=["/bin/sh", "-c", " ".join(launch_node_cmd)]
         else: 

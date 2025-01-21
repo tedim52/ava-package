@@ -36,10 +36,7 @@ def get_subnet_evm_url(plan, chain_configs):
     )
     cpu_arch = cpu_arch_result.output
     plan.print("Detected CPU arch: {0}".format(cpu_arch))
-    if contains_etna_l1(chain_configs):
-        return constants.ETNA_SUBNET_EVM_BINARY_URL_FMT_STR.format(cpu_arch)
-    else:
-        return constants.SUBNET_EVM_BINARY_URL_FMT_STR.format(cpu_arch)
+    return constants.SUBNET_EVM_BINARY_URL_FMT_STR.format(cpu_arch)
 
 def get_avalanchego_img(chain_configs):
     return constants.DEFAULT_AVALANCHEGO_IMAGE
