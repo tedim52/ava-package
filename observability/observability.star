@@ -20,7 +20,6 @@ def launch_observability(plan, node_info):
         name="node-exporter",
         config=ServiceConfig(
             image="prom/node-exporter:latest",
-            # cmd=["/bin/sh", "-c", "./node_exporter"],
             ports={
                 "node-exporter": PortSpec(
                     number=9100,
