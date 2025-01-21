@@ -32,10 +32,7 @@ def launch(
     services = {}
     for index in range(0, node_count):
         node_name = NODE_NAME_PREFIX + str(index)
-
         node_data_dirpath = ABS_DATA_DIRPATH + node_name
-        
-
         node_config_filepath = node_data_dirpath + "/config.json"
 
         launch_node_cmd = [
@@ -69,9 +66,15 @@ def launch(
                 "/tmp/data": genesis
             }
 
+        entrypoint=""
+        if network_id == "fuji":
+            entrypoint=["/bin/sh", "-c", " ".join(launch_node_cmd)]
+        else: 
+            entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"]
+
         node_service_config = ServiceConfig(
             image=image,
-            entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
+            entrypoint=entrypoint,
             ports={
                 "rpc": PortSpec(number=RPC_PORT_NUM, transport_protocol="TCP", wait=None),
                 "staking": PortSpec(number=STAKING_PORT_NUM, transport_protocol="TCP", wait=None)
