@@ -57,7 +57,6 @@ def launch(
         public_ports["staking"] = PortSpec(number=STAKING_PORT_NUM + index * 2, transport_protocol="TCP", wait=None)
 
         log_files = ["main.log", "C.log", "X.log", "P.log", "vm-factory.log"]
-        log_files = ["main.log"]
         log_files_cmds = ["touch /tmp/{0}".format(log_file) for log_file in log_files]
         log_file_cmd = " && ".join(log_files_cmds)
 
@@ -67,8 +66,8 @@ def launch(
             }
 
         entrypoint=[]
-        if network_id == "fuji":
-            entrypoint=["/bin/sh", "-c", " ".join(launch_node_cmd)]
+        if network_id == constants.FUJI_NETWORK_ID:
+            entrypoint=["/bin/sh", "-c", "{0} && {1}".format("mkdir -p {0}".format(ABS_PLUGIN_DIRPATH), " ".join(launch_node_cmd))]
         else: 
             entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"]
 
@@ -98,23 +97,24 @@ def launch(
             launch_node_cmd.append("--bootstrap-ips={0}".format(",".join(bootstrap_ips)))
             launch_node_cmd.append("--bootstrap-ids={0}".format(",".join(bootstrap_ids)))
 
-        plan.exec(
-            service_name=node_name,
-            recipe=ExecRecipe(
-                command=["mkdir", "-p", ABS_PLUGIN_DIRPATH]
+        if network_id != constants.FUJI_NETWORK_ID:
+            plan.exec(
+                service_name=node_name,
+                recipe=ExecRecipe(
+                    command=["mkdir", "-p", ABS_PLUGIN_DIRPATH]
+                )
             )
-        )
 
-        if custom_subnet_vm_url:
-            download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
+            if custom_subnet_vm_url:
+                download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
-        plan.exec(
-            description="Restarting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
-            service_name=node_name,
-            recipe=ExecRecipe(
-                command=["/bin/sh", "-c", " ".join(launch_node_cmd) + " >/dev/null 2>&1 &"],
+            plan.exec(
+                description="Starting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
+                service_name=node_name,
+                recipe=ExecRecipe(
+                    command=["/bin/sh", "-c", " ".join(launch_node_cmd) + " >/dev/null 2>&1 &"],
+                )
             )
-        )
 
         bootstrap_ips.append("{0}:{1}".format(node.ip_address, STAKING_PORT_NUM))
 
