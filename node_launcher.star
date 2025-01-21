@@ -60,10 +60,8 @@ def launch(
         log_files_cmds = ["touch /tmp/{0}".format(log_file) for log_file in log_files]
         log_file_cmd = " && ".join(log_files_cmds)
 
-        if genesis != "": 
-            node_files = {
-                "/tmp/data": genesis
-            }
+        node_files = {}
+        node_files["/tmp/data"] = genesis
 
         entrypoint=[]
         if network_id == constants.FUJI_NETWORK_ID:

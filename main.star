@@ -29,10 +29,7 @@ def run(plan, args):
 
     # TODO: make it so if its fuji, generate_genesis does not run
     # generate genesis for primary network (p-chain, x-chain, c-chain)
-    if network_id == constants.FUJI_NETWORK_ID: # dont need to generate a genesis if connecting to fuji
-        genesis, subnet_evm_id = builder.generate_genesis(plan, "1337", num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
-    else:
-        genesis, subnet_evm_id = builder.generate_genesis(plan, network_id, num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
+    genesis, subnet_evm_id = builder.generate_genesis(plan, network_id, num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
 
     # start avalanche node network
     node_info, bootnode_name = node_launcher.launch(
