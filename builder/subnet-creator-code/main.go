@@ -50,7 +50,6 @@ const (
 	// TODO: pass this in via a variable
 	subnetGenesisPath = "/tmp/subnet-genesis/example-subnet-genesis-with-teleporter.json.tmpl"
 	etnaContractsPath = "/tmp/contracts"
-	// etnaContractsPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/contracts"
 
 	// validate from a minute after now
 	startTimeDelayFromNow = 10 * time.Minute
@@ -105,48 +104,6 @@ var (
 	defaultPoll            = common.WithPollFrequency(500 * time.Millisecond)
 	defaultPoAOwnerBalance = new(big.Int).Mul(vm.OneAvax, big.NewInt(100))
 )
-
-// func main() {
-// 	genesisData, err := getEtnaGenesisBytes(genesis.EWOQKey, 4444, "myblockchain")
-// 	if err != nil {
-// 		fmt.Print("err")
-// 	}
-
-// genesisJson := make(map[string]interface{})
-// err = json.Unmarshal(genesisData, &genesisJson)
-// if err != nil {
-// 	fmt.Print("err")
-// }
-
-// prettyJSON, err := json.MarshalIndent(genesisJson, "", "  ")
-// if err != nil {
-// 	// return fmt.Errorf("failed to marshal genesis: %s\n", err)
-// 	fmt.Print("err")
-// }
-// 	fmt.Println(string(prettyJSON))
-// }
-
-// func main() {
-// 	// Example private key in hex (do not use this in production!)
-// 	privateKeyHex := "56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027"
-
-// 	// Convert hex string to ECDSA private key
-// 	privateKey, err := crypto.HexToECDSA(privateKeyHex)
-// 	if err != nil {
-// 		log.Fatalf("Failed to convert hex to private key: %v", err)
-// 	}
-
-// 	// Derive public key from private key
-// 	publicKey := privateKey.Public()
-// 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-// 	if !ok {
-// 		log.Fatalf("Failed to cast public key to ECDSA")
-// 	}
-
-// 	// Derive Ethereum address from public key
-// 	address := crypto.PubkeyToAddress(*publicKeyECDSA)
-// 	fmt.Printf("Ethereum address: %s\n", address.Hex())
-// }
 
 func main() {
 	if len(os.Args) < minArgs {
@@ -547,10 +504,6 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 	if err != nil {
 		fmt.Println("Failed to parse the hex value")
 	}
-	// faucetAddress, err := evm.ParseEthAddress("0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC")
-	// if err != nil {
-	// 	fmt.Println("Failed to parse the hex value")
-	// }
 
 	allocation := types.GenesisAlloc{
 		// FIXME: This looks like a bug in the CLI, CLI allocates funds to a zero address here
@@ -558,14 +511,10 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 		ethAddr:                   types.Account{Balance: bigIntValue},
 		txSpammerAddress:          types.Account{Balance: bigIntValue},
 		teleporterDeployerAddress: types.Account{Balance: bigIntValue},
-		// faucetAddress:             types.Account{Balance: bigIntValue},
-		otherAddress:      types.Account{Balance: bigIntValue},
-		otherAddressTwo:   types.Account{Balance: bigIntValue},
-		otherAddressThree: types.Account{Balance: bigIntValue},
+		otherAddress:              types.Account{Balance: bigIntValue},
+		otherAddressTwo:           types.Account{Balance: bigIntValue},
+		otherAddressThree:         types.Account{Balance: bigIntValue},
 	}
-
-	// add teleporter contracts
-	// teleporter.AddICMMessengerContractToAllocations(allocation)
 
 	// add contracts needed for etna
 	proxyAdminBytecode, err := loadHexFile(fmt.Sprintf("%v/proxy_compiled/deployed_proxy_admin_bytecode.txt", etnaContractsPath))
@@ -662,11 +611,11 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 		"requirePrimaryNetworkSigners": true,
 	}
 
-	genesisBytesWithWarpConfig, err := json.Marshal(genesis)
+	genesisBytesWithWarpConfig, err := json.Marshal(genesisMap)
 	if err != nil {
 		log.Fatalf("❌ Failed to marshal genesis to map: %s\n", err)
 	}
-	if err := json.Unmarshal(genesisBytes, &genesisMap); err != nil {
+	if err := json.Unmarshal(genesisBytesWithWarpConfig, &genesisMap); err != nil {
 		log.Fatalf("❌ Failed to unmarshal genesis to map: %s\n", err)
 	}
 
