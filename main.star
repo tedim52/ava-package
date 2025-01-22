@@ -21,6 +21,7 @@ def run(plan, args):
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
     
+    is_etna_deployment = utils.contains_etna_l1(chain_configs)
     subnet_evm_binary_url = utils.get_subnet_evm_url(plan, chain_configs)
     avalanche_go_image = utils.get_avalanchego_img(chain_configs)
 
@@ -46,11 +47,11 @@ def run(plan, args):
     # create l1s
     l1_info = {}
     for idx, chain in enumerate(chain_configs):
-        isEtna = chain.get('etna', False)
-        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"], isEtna)
+        is_etna_chain = chain.get('etna', False)
+        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"], is_etna_chain)
 
         # teleporter messenger needs to be manually deployed on etna l1s
-        if isEtna:
+        if is_etna_chain:
             teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
             plan.print(teleporter_messenger_address)
 
@@ -91,7 +92,7 @@ def run(plan, args):
             l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
 
     if launch_relayer == True:
-        relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
+        relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info, is_etna_deployment)
 
     # additional services:
     if additional_services.get("observability", False) == True:

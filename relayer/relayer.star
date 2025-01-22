@@ -1,11 +1,12 @@
 redis = import_module("github.com/kurtosis-tech/redis-package/main.star")
 
-RELAYER_IMAGE = "avaplatform/awm-relayer:latest"
+DEFAULT_RELAYER_IMAGE = "avaplatform/awm-relayer:v1.4.0"
+ETNA_RELAYER_IMAGE = "avaplatform/icm-relayer:v2.0.0-fuji"
 ACCOUNT_PRIVATE_KEY = "d28fb31486d7bd9f7fbe4c9087939ce765d4c3acf577756b1f9af9702956a063"
 MESSAGE_CONTRACT_ADDRESS = "0x253b2784c75e510dD0fF1da844684a1aC0aa5fcf"
 MESSAGE_FORMAT = "teleporter"
 
-def launch_relayer(plan, bootnode_url, chain_info):
+def launch_relayer(plan, bootnode_url, chain_info, is_etna):
     redis_service = redis.run(plan)
 
     relayer_config_tmpl = read_file(src="./relayer-config.json.tmpl")
@@ -26,11 +27,20 @@ def launch_relayer(plan, bootnode_url, chain_info):
         }
     )
 
+    entrypoint = []
+    image = ""
+    if is_etna == True:
+        image = ETNA_RELAYER_IMAGE
+        entrypoint=["/bin/sh", "-c", "/usr/bin/icm-relayer --config-file /config/relayer-config.json"]
+    else:
+        image = DEFAULT_RELAYER_IMAGE
+        entrypoint=["/bin/sh", "-c", "/usr/bin/awm-relayer --config-file /config/relayer-config.json"]
+
     plan.add_service(
         name="relayer",
         config=ServiceConfig(
-            image=RELAYER_IMAGE,
-            entrypoint=["/bin/sh", "-c", "/usr/bin/awm-relayer --config-file /config/relayer-config.json"],
+            image=image,
+            entrypoint=entrypoint,
             ports={
                 "api": PortSpec(number=8080, transport_protocol="TCP", application_protocol="HTTP"),
             },
