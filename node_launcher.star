@@ -47,7 +47,7 @@ def launch(
             "--network-health-min-conn-peers=" + str(node_count - 1),
         ]
 
-        if network_id != constants.FUJI_NETWORK_ID:
+        if network_id != constants.FUJI_NETWORK_ID: # this flag is ignored when setting to fuji network
             launch_node_cmd.append("--genesis-file=/tmp/data/genesis.json")
 
         plan.print("Creating node {0} with command {1}".format(node_name, launch_node_cmd))
@@ -126,7 +126,7 @@ def launch(
             "launch-command": launch_node_cmd,
         }
 
-    if network_id != constants.FUJI_NETWORK_ID:
+    if network_id != constants.FUJI_NETWORK_ID: # fuji node won't become healthy till its bootstrapped, so skip health check
         wait_for_health(plan, "node-" + str(node_count - 1)) 
 
     return node_info, NODE_NAME_PREFIX + "0"
