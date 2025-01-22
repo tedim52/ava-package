@@ -44,7 +44,6 @@ def launch_faucet(plan, chain_info):
                     transport_protocol="TCP",
                 )
             },
-
         )
     )
 

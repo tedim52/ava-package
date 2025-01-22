@@ -1,5 +1,4 @@
 postgres = import_module("github.com/kurtosis-tech/postgres-package/main.star")
-# blockscout = import_module("github.com/tedim52/kurtosis-blockscout/main.star")
 
 def launch_blockscout(
     plan,
@@ -9,12 +8,6 @@ def launch_blockscout(
     chain_ws_url,
     chain_num
 ):
-    # blockscout.run(plan, {
-        # "chain_name": chain_name,
-        # "chain_id": chain_id,
-        # "chain_rpc_url": chain_rpc_url,
-        # "chain_ws"url": chain_ws_url,
-    # })
     postgres_output = postgres.run(
         plan,
         service_name="blockscout-postgres-{0}".format(chain_name),
@@ -51,7 +44,6 @@ def launch_blockscout(
     blockscout_service = plan.add_service(
         name="blockscout-{0}".format(chain_name), 
         config=ServiceConfig(
-            # image="blockscout/blockscout:6.9.0",
             image="blockscout/blockscout:latest",
             ports={
                 "http": PortSpec(
@@ -70,17 +62,16 @@ def launch_blockscout(
                 "NETWORK": chain_name, 
                 "SUBNETWORK": chain_name,
                 "CHAIN_ID": str(chain_id),
-                # "CHAIN_TYPE": "ethereum",
                 "COIN": "ETH",
                 "ETHEREUM_JSONRPC_VARIANT": "geth", # avalanche subnet evms are 1:1 with geth
                 "ETHEREUM_JSONRPC_HTTP_URL": chain_rpc_url, 
-                "ETHEREUM_JSONRPC_TRACE_URL": chain_rpc_url, # TODO: whats the difference between http url
+                "ETHEREUM_JSONRPC_TRACE_URL": chain_rpc_url, 
                 "ETHEREUM_JSONRPC_WS_URL": chain_ws_url, 
                 "ETHEREUM_JSONRPC_HTTP_INSECURE": "true",
                 "DATABASE_URL": postgres_url,
                 "ECTO_USE_SSL": "false",
                 "MICROSERVICE_SC_VERIFIER_ENABLED": "true",
-                "MICROSERVICE_SC_VERIFIER_URL": verif_url, # what does the verifier do?
+                "MICROSERVICE_SC_VERIFIER_URL": verif_url, 
                 "MICROSERVICE_SC_VERIFIER_TYPE": "sc_verifier",
                 "INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER": "true",
                 "API_V2_ENABLED": "true",
@@ -90,59 +81,8 @@ def launch_blockscout(
         )
     )
     plan.print(blockscout_service)
-    # plan.exec(
-    #     description="""
-    #     Allow 3330s for blockscout to start indexing,
-    #     otherwise bs/Stats crashes because it expects to find content on DB
-    #     """,
-    #     service_name="blockscout-{0}".format(chain_name),
-    #     recipe=ExecRecipe(
-    #         command=["/bin/sh", "-c", "sleep 30"],
-    #     ),
-    # )
 
     blockscout_url = "http://{}:{}".format(blockscout_service.hostname, blockscout_service.ports["http"].number)
-
-    # stats
-    # stats_postgres_output = postgres.run(
-    #     plan,
-    #     service_name="blockscout-stats-postgres-{0}".format(chain_name),
-    #     database="stats",
-    # )
-    # stats = plan.add_service(
-    #     name="blockscout-stats-{0}".format(chain_name),
-    #     config=ServiceConfig(
-    #         image="ghcr.io/blockscout/stats:latest",
-    #         ports={
-    #             "stats": PortSpec(
-    #                 number=8050, 
-    #                 application_protocol="http", 
-    #                 wait="30s"
-    #             ),
-    #         },
-    #         env_vars={
-    #             "STATS__DB_URL": stats_postgres_output.url, 
-    #             "STATS__BLOCKSCOUT_DB_URL": postgres_url,
-    #             "STATS__CREATE_DATABASE": "false",
-    #             "STATS__RUN_MIGRATIONS": "true",
-    #             "STATS__SERVER__HTTP__CORS__ENABLED": "false",
-    #         },
-    #     ),
-    # )
-
-    # visualizer
-    # visualizer = plan.add_service(
-    #     name="blockscout-visualizer-{0}".format(chain_name),
-    #     config=ServiceConfig(
-    #         image="ghcr.io/blockscout/visualizer:latest",
-    #         ports={
-    #             "http": PortSpec(
-    #                 number=8050, 
-    #                 application_protocol="http"
-    #             ),
-    #         },
-    #     ),
-    # )
 
     # frontend
     blockscout_frontend = plan.add_service(
