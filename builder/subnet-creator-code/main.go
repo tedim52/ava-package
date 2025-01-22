@@ -612,9 +612,8 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 	// add warpConfig to config
 	configMap := genesisMap["config"].(map[string]interface{})
 	configMap["warpConfig"] = map[string]interface{}{
-		"blockTimestamp":               now,
-		"quorumNumerator":              67,
-		"requirePrimaryNetworkSigners": true,
+		"blockTimestamp":  now,
+		"quorumNumerator": 67,
 	}
 
 	genesisBytesWithWarpConfig, err := json.Marshal(genesisMap)
