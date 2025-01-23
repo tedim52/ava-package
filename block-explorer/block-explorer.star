@@ -6,6 +6,7 @@ def launch_blockscout(
     chain_id,
     chain_rpc_url,
     chain_ws_url,
+    maybe_codespace_name,
     chain_num
 ):
     postgres_output = postgres.run(
@@ -85,13 +86,27 @@ def launch_blockscout(
     blockscout_url = "http://{}:{}".format(blockscout_service.hostname, blockscout_service.ports["http"].number)
 
     # frontend
+    frontend_port_num = 3000 + chain_num
+
+    public_host = ""
+    public_host_uri = ""
+    next_public_app_port = 0
+    if maybe_codespace_name != "":
+        public_host = "{0}-{1}".format(maybe_codespace_name, frontend_port_num)
+        public_host_uri = "https://{0}".format(public_host)
+        next_public_app_port_num = 443 # codespace host is a proxy -
+    else:
+        public_host = "127.0.0.1"
+        public_host_uri = "http://{0}:{1}".format(public_host, frontend_port_num)
+        next_public_app_port_num = frontend_port_num
+
     blockscout_frontend = plan.add_service(
         name="blockscout-frontend-{0}".format(chain_name),
         config=ServiceConfig(
             image="ghcr.io/blockscout/frontend:latest",
             ports={
                 "http": PortSpec(
-                    number=3000 + chain_num,
+                    number=frontend_port_num,
                     transport_protocol="TCP",
                     application_protocol="http",
                     wait="30s",
@@ -106,14 +121,11 @@ def launch_blockscout(
                 )
             },
             env_vars={
-                "PORT": str(3000 + chain_num),
+                "PORT": str(frontend_port_num),
                 ## Blockchain configuration.
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#blockchain-parameters
                 "NEXT_PUBLIC_NETWORK_NAME": chain_name,
                 "NEXT_PUBLIC_NETWORK_ID": str(chain_id),
-                # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#rollup-chain
-                # "NEXT_PUBLIC_ROLLUP_TYPE": "zkEvm",
-                # "NEXT_PUBLIC_ROLLUP_L1_BASE_URL": l1_explorer,
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#transaction-interpretation
                 "NEXT_PUBLIC_TRANSACTION_INTERPRETATION_PROVIDER": "blockscout",
                 ## API configuration.
@@ -121,18 +133,10 @@ def launch_blockscout(
                 "NEXT_PUBLIC_API_PROTOCOL": "http",
                 "NEXT_PUBLIC_API_HOST": blockscout_service.ip_address + ":" + str(blockscout_service.ports["http"].number),
                 "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
-                # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#blockchain-statistics
-                # "NEXT_PUBLIC_STATS_API_HOST": "http://{}:{}".format(
-                #     stats.ip_address, stats.ports["stats"].number
-                # ),
-                # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#solidity-to-uml-diagrams
-                # "NEXT_PUBLIC_VISUALIZE_API_HOST": "http://{}:{}".format(
-                #     visualizer.ip_address, visualizer.ports["http"].number
-                # ),
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#app-configuration
                 "NEXT_PUBLIC_APP_PROTOCOL": "http",
-                "NEXT_PUBLIC_APP_HOST": "127.0.0.1",
-                "NEXT_PUBLIC_APP_PORT": str(3000 + chain_num),
+                "NEXT_PUBLIC_APP_HOST": public_host,
+                "NEXT_PUBLIC_APP_PORT": str(next_public_app_port_num),
                 "NEXT_PUBLIC_USE_NEXT_JS_PROXY": "true",
                 ## Remove ads.
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#banner-ads
@@ -146,4 +150,4 @@ def launch_blockscout(
         ),
     )
 
-    return "http://127.0.0.1:{}".format(blockscout_frontend.ports["http"].number)
+    return public_host_uri

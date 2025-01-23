@@ -3,7 +3,7 @@ node_launcher = import_module("./node_launcher.star")
 l1 = import_module("./l1.star")
 relayer = import_module("./relayer/relayer.star")
 contract_deployer = import_module("./contract-deployment/contract-deployer.star")
-bridge_frontend = import_module("./frontend/bridge-frontend.star")
+bridge_frontend = import_module("./bridge-frontend/bridge-frontend.star")
 utils = import_module("./utils.star")
 constants = import_module("./constants.star")
 
@@ -20,6 +20,7 @@ def run(plan, args):
     num_nodes = args['num-nodes']
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
+    codespace_name = args.get('codespace', "")
     
     is_etna_deployment = utils.contains_etna_l1(chain_configs)
     subnet_evm_binary_url = utils.get_subnet_evm_url(plan, chain_configs)
@@ -28,7 +29,6 @@ def run(plan, args):
     # create builder, responsible for scripts to generate genesis, create subnets, create blockchains
     builder.init(plan, node_cfg)
 
-    # TODO: make it so if its fuji, generate_genesis does not run
     # generate genesis for primary network (p-chain, x-chain, c-chain)
     genesis, subnet_evm_id = builder.generate_genesis(plan, network_id, num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
 
@@ -40,7 +40,8 @@ def run(plan, args):
         avalanche_go_image,
         num_nodes,
         subnet_evm_id,
-        subnet_evm_binary_url
+        subnet_evm_binary_url,
+        codespace_name
     )
     plan.print("Node Info: {0}".format(node_info))
     
@@ -107,7 +108,7 @@ def run(plan, args):
             tx_spammer.spam_transactions(plan, chain["RPCEndpointBaseURL"], chain_name)
 
         if additional_services.get("block-explorer", False) == True:
-            blockscout_frontend_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"], c)
+            blockscout_frontend_url = block_explorer.launch_blockscout(plan, chain_name, chain["GenesisChainId"], chain["RPCEndpointBaseURL"], chain["WSEndpointBaseURL"], codespace_name, c)
             l1_info[chain_name]["PublicExplorerUrl"] = blockscout_frontend_url
         c += 1
 

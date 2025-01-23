@@ -72,7 +72,7 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
 
     return genesis_data, vm_id
 
-def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
+def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, maybe_codespace_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
     result = plan.exec(
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = BUILDER_SERVICE_NAME,
@@ -102,7 +102,8 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
         validator_ids.append(utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/node-{1}/validator_id.txt".format(subnet_id, index)))
 
     http_trimmed_uri = uri.replace("http://", "", 1)
-    return {
+
+    l1_config = {
         "SubnetId": subnet_id,
         "BlockchainId": blockchain_id, 
         "BlockchainIdHex": hex_blockchain_id,
@@ -114,3 +115,8 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
         "PublicRPCEndpointBaseURL": "{0}/ext/bc/{1}/rpc".format(public_uri, blockchain_id),
         "WSEndpointBaseURL": "ws://{0}/ext/bc/{1}/ws".format(http_trimmed_uri, blockchain_id),
     }
+    
+    if maybe_codespace_uri != "":
+        l1_config["CodespaceRPCEndpointBaseURL"] = "{0}/ext/bc/{1}/rpc".format(maybe_codespace_uri, blockchain_id)
+
+    return l1_config

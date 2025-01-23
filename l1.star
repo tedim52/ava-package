@@ -7,7 +7,8 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
     # create subnet and blockchain for this l1
     node_rpc_uri = node_info[bootnode_name]["rpc-url"] 
     public_node_rpc_uri = node_info[bootnode_name]["public-rpc-url"] 
-    chain_info = builder.create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, num_nodes, isEtna, vm_id, chain_name, l1_counter, chain_id)
+    maybe_codespace_node_uri = node_info[bootnode_name]["codespace-rpc-url"] 
+    chain_info = builder.create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, maybe_codespace_node_uri, num_nodes, isEtna, vm_id, chain_name, l1_counter, chain_id)
     
     subnet_id = chain_info["SubnetId"]
     chain_id = chain_info["BlockchainId"]

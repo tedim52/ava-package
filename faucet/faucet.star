@@ -70,7 +70,7 @@ def get_faucet_cfg_info(chain_info):
             "Name": chain_name,
             "RPCUrl": chain["RPCEndpointBaseURL"],
             "ChainID": chain["NetworkId"],
-            "PublicExplorerUrl": chain["PublicExplorerUrl"],
+            "PublicExplorerUrl": chain["PublicExplorerUrl"], 
             "ERC20TokenName": chain.get("ERC20TokenName", "TOK"),
         })
         if "ERC20TokenAddress" in chain:

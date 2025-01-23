@@ -22,7 +22,8 @@ def launch(
     image, 
     node_count,  
     vmId, 
-    custom_subnet_vm_url):
+    custom_subnet_vm_url,
+    maybe_codespace_name):
     bootstrap_ips = []
     bootstrap_ids = []
     nodes = []
@@ -125,6 +126,11 @@ def launch(
             "public-rpc-url": "http://{0}:{1}".format(PUBLIC_IP, RPC_PORT_NUM),
             "launch-command": launch_node_cmd,
         }
+
+        if maybe_codespace_name != "":
+            node_info[node_name]["codespace-rpc-url"] = "https://{0}-{1}.app.github.dev".format(maybe_codespace_name, RPC_PORT_NUM)
+        else:
+            node_info[node_name]["codespace-rpc-url"] = ""
 
     if network_id != constants.FUJI_NETWORK_ID: # fuji node won't become healthy till its bootstrapped, so skip health check
         wait_for_health(plan, "node-" + str(node_count - 1)) 
