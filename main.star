@@ -20,7 +20,7 @@ def run(plan, args):
     num_nodes = args['num-nodes']
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
-    codespace_name = args.get('codespace', "")
+    codespace_name = args.get('codespace-name', "")
     
     is_etna_deployment = utils.contains_etna_l1(chain_configs)
     subnet_evm_binary_url = utils.get_subnet_evm_url(plan, chain_configs)
