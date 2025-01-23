@@ -70,9 +70,9 @@ def get_bridge_config_info(plan, l1_info, chain_config):
     dest_chain_id = ""
     token_address = ""
 
-    rpc_url = l1_info[source_chain_name]["CodespaceRPCEndpointBaseURL"] if "CodespaceRPCEndpointBaseURL" in l1_info[source_chain_name] else l1_info[source_chain_name]["PublicRPCEndpointBaseURL"]
     for chain in chain_config:
         source_chain_name = chain["name"]
+        rpc_url = l1_info[source_chain_name]["CodespaceRPCEndpointBaseURL"] if "CodespaceRPCEndpointBaseURL" in l1_info[source_chain_name] else l1_info[source_chain_name]["PublicRPCEndpointBaseURL"]
         chain_cfgs.append({
             "NETWORK_ID": l1_info[source_chain_name]["NetworkId"],
             "BLOCKCHAIN_NAME": source_chain_name,

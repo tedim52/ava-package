@@ -91,14 +91,17 @@ def launch_blockscout(
     public_host = ""
     public_host_uri = ""
     next_public_app_port = 0
+    ws_protocol = ""
     if maybe_codespace_name != "":
         public_host = "{0}-{1}".format(maybe_codespace_name, frontend_port_num)
         public_host_uri = "https://{0}".format(public_host)
         next_public_app_port_num = 443 # codespace host is a proxy -
+        ws_protocol = "wss"
     else:
         public_host = "127.0.0.1"
         public_host_uri = "http://{0}:{1}".format(public_host, frontend_port_num)
         next_public_app_port_num = frontend_port_num
+        ws_protocol = "ws"
 
     blockscout_frontend = plan.add_service(
         name="blockscout-frontend-{0}".format(chain_name),
@@ -132,7 +135,7 @@ def launch_blockscout(
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#api-configuration
                 "NEXT_PUBLIC_API_PROTOCOL": "http",
                 "NEXT_PUBLIC_API_HOST": blockscout_service.ip_address + ":" + str(blockscout_service.ports["http"].number),
-                "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
+                "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": ws_protocol,
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#app-configuration
                 "NEXT_PUBLIC_APP_PROTOCOL": "http",
                 "NEXT_PUBLIC_APP_HOST": public_host,
