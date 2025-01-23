@@ -23,7 +23,7 @@ def launch_faucet(plan, chain_info):
         config=ServiceConfig(
             image="tedim52/avalanche-faucet:latest",
             files={
-                "avalanche-faucet/config/": config_file_artifact,
+                "/avalanche-faucet/config/": config_file_artifact,
             },
             env_vars={
                 "PK": FAUCET_PK,
