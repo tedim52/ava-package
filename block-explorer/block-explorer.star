@@ -94,7 +94,7 @@ def launch_blockscout(
     ws_protocol = ""
     next_public_app_protocol = ""
     if maybe_codespace_name != "":
-        public_host = "{0}-{1}".format(maybe_codespace_name, frontend_port_num)
+        public_host = "{0}-{1}.app.github.dev".format(maybe_codespace_name, frontend_port_num)
         public_host_uri = "https://{0}".format(public_host)
         next_public_app_port_num = 443 # codespace host is a proxy -
         ws_protocol = "wss"
