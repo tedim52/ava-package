@@ -20,7 +20,8 @@ def launch(
     image, 
     node_count,  
     vmId, 
-    custom_subnet_vm_url):
+    custom_subnet_vm_url,
+    custom_subnet_vm_path):
 
     bootstrap_ips = []
     bootstrap_ids = []
@@ -62,6 +63,10 @@ def launch(
             "/tmp/data": genesis
         }
 
+        if custom_subnet_vm_path:
+            subnet_evm_plugin = plan.upload_files(custom_subnet_vm_path)
+            node_files["/tmp/data/hypersdk"]=  subnet_evm_plugin
+
         node_service_config = ServiceConfig(
             image=image,
             entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
@@ -95,7 +100,9 @@ def launch(
             )
         )
 
-        if custom_subnet_vm_url:
+        if custom_subnet_vm_path:
+            cp(plan, node_name, "/tmp/data/hypersdk/" + vmId, ABS_PLUGIN_DIRPATH + vmId)
+        elif custom_subnet_vm_url:
             download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
         plan.exec(
@@ -209,6 +216,14 @@ def download_to_path_and_untar(plan, node_name, url, dest):
             command=["/bin/sh", "-c", "mv /static_files/subnet-evm {0}".format(dest)]
         )
     )    
+
+def cp(plan, node_name, src, dest):
+    plan.exec(
+        service_name=node_name,
+        recipe=ExecRecipe(
+            command=["cp", src, dest]
+        )
+    )
 
 
 

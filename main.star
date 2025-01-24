@@ -1,7 +1,7 @@
 builder = import_module("./builder/builder.star")
 utils = import_module("./utils.star")
 node_launcher = import_module("./node_launcher.star")
-l1 = import_module("./l1.star")
+l1 = import_module("./l1/l1.star")
 relayer = import_module("./relayer/relayer.star")
 contract_deployer = import_module("./contract-deployment/contract-deployer.star")
 bridge_frontend = import_module("./frontend/bridge-frontend.star")
@@ -12,7 +12,8 @@ faucet = import_module('./faucet/faucet.star')
 tx_spammer = import_module('./tx_spammer.star')
 block_explorer = import_module('./block-explorer/block-explorer.star')
 
-DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
+# DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
+DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.12-rc.2"
 ETNA_DEVNET_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.12.0-fuji"
 SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.10/subnet-evm_0.6.10_linux_arm64.tar.gz"
 AMD64_SUBNET_EVM_BINARY_URL = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.10/subnet-evm_0.6.10_linux_amd64.tar.gz"
@@ -58,8 +59,10 @@ def run(plan, args):
         genesis,
         image,
         num_nodes,
-        subnet_evm_id,
-        subnet_evm_binary_url
+        # subnet_evm_id,
+        "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7",
+        subnet_evm_binary_url,
+        "./l1/vms/pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7",
     )
     plan.print("Node Info: {0}".format(node_info))
     
@@ -68,7 +71,7 @@ def run(plan, args):
     l1_info = {}
     for idx, chain in enumerate(chain_configs):
         isEtna = chain.get('etna', False)
-        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"], isEtna)
+        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7", idx, chain["network-id"], isEtna)
 
         # teleporter messenger needs to be manually deployed on etna subnets
         if isEtna:
