@@ -100,6 +100,35 @@ def run(plan, args):
         observability.launch_observability(plan, node_info)
 
     if additional_services.get("ictt-frontend", False) == True and len(l1_info) >= 2 and launch_relayer == True:
+        if codespace_name != "":
+            proxy_cfg_tmpl = read_file("./proxy/nginx.conf.tmpl")
+            proxy_nginx_config = plan.render_templates(name="proxy-nginx-config", config={
+                "nginx.conf":struct(
+                    template=proxy_cfg_tmpl,
+                    data={
+                        "Node1IpAddrAndPort": node_info["node-0"]["rpc-url"],
+                    }
+                )
+            })
+            plan.add_service(
+                name="node-0-proxy",
+                config=ServiceConfig(
+                    image="nginx:latest",
+                    ports={
+                        "proxy": PortSpec(number=9649, transport_protocol="TCP", application_protocol="HTTP")
+                    },
+                    public_ports={
+                        "proxy": PortSpec(number=9649, transport_protocol="TCP", application_protocol="HTTP")
+                    },
+                    files={
+                        "/etc/nginx/": proxy_nginx_config
+                    }
+                )
+            )
+
+            for chain_name, chain in l1_info.items():
+                chain["CodespaceRPCEndpointBaseURL"] = chain["CodespaceRPCEndpointBaseURL"].replace("9650", "9649")
+
         bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
     
     c = 0

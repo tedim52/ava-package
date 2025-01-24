@@ -1,0 +1,27 @@
+events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 9649;
+
+        # Add CORS headers to allow access to the backend server
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
+
+        # Allow preflight OPTIONS requests
+        if ($request_method = 'OPTIONS') {
+            return 204;
+        }
+
+        location / {
+            proxy_pass {{.Node1IpAddrAndPort}};  
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
