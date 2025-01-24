@@ -4,6 +4,7 @@ l1 = import_module("./l1.star")
 relayer = import_module("./relayer/relayer.star")
 contract_deployer = import_module("./contract-deployment/contract-deployer.star")
 bridge_frontend = import_module("./bridge-frontend/bridge-frontend.star")
+proxy = import_module("./proxy/node-proxy.star")
 utils = import_module("./utils.star")
 constants = import_module("./constants.star")
 
@@ -101,33 +102,12 @@ def run(plan, args):
 
     if additional_services.get("ictt-frontend", False) == True and len(l1_info) >= 2 and launch_relayer == True:
         if codespace_name != "":
-            proxy_cfg_tmpl = read_file("./proxy/nginx.conf.tmpl")
-            proxy_nginx_config = plan.render_templates(name="proxy-nginx-config", config={
-                "nginx.conf":struct(
-                    template=proxy_cfg_tmpl,
-                    data={
-                        "Node1IpAddrAndPort": node_info["node-0"]["rpc-url"],
-                    }
-                )
-            })
-            plan.add_service(
-                name="node-0-proxy",
-                config=ServiceConfig(
-                    image="nginx:latest",
-                    ports={
-                        "proxy": PortSpec(number=9649, transport_protocol="TCP", application_protocol="HTTP")
-                    },
-                    public_ports={
-                        "proxy": PortSpec(number=9649, transport_protocol="TCP", application_protocol="HTTP")
-                    },
-                    files={
-                        "/etc/nginx/": proxy_nginx_config
-                    }
-                )
-            )
+            # when using codespace, a proxy needs to be launched to add cors headers for bridge frontend requests to work
+            proxy_port = proxy.launch_node_proxy(plan, node_info["node-0"]["rpc-url"])
 
             for chain_name, chain in l1_info.items():
-                chain["CodespaceRPCEndpointBaseURL"] = chain["CodespaceRPCEndpointBaseURL"].replace("9650", "9649")
+                # update codespace endpoints to point to proxy instead
+                chain["CodespaceRPCEndpointBaseURL"] = chain["CodespaceRPCEndpointBaseURL"].replace("9650", str(proxy_port))
 
         bridge_frontend.launch_bridge_frontend(plan, l1_info, chain_configs)
     
