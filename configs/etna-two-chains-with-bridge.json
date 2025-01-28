@@ -11,6 +11,7 @@
             "vm": "subnetevm",
             "network-id": 555555,
             "enable-teleporter": true,
+            "etna": true,
             "erc-20-token-name": "TOK",
             "erc20-bridge-config": {
                 "destinations": ["mysecondblockchain"]
@@ -20,7 +21,8 @@
             "name": "mysecondblockchain",
             "vm": "subnetevm",
             "network-id": 666666,
-            "enable-teleporter": true
+            "enable-teleporter": true,
+            "etna": true
         }
     ],
     "additional-services": {

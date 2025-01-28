@@ -20,7 +20,18 @@
             "name": "mysecondblockchain",
             "vm": "subnetevm",
             "network-id": 666666,
-            "enable-teleporter": true
+            "enable-teleporter": true,
+            "erc-20-token-name": "TOK",
+            "erc20-bridge-config": {
+                "destinations": ["mythirdblockchain"]
+            }
+        },
+        {
+            "name": "mythirdblockchain",
+            "vm": "subnetevm",
+            "network-id": 777777,
+            "enable-teleporter": true,
+            "erc-20-token-name": "TOK"
         }
     ],
     "additional-services": {

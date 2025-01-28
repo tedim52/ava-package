@@ -22,21 +22,8 @@ def init(plan, node_cfg_map):
         name="node-cfg"
     )
 
-    subnet_genesis = plan.upload_files("./static-files/example-subnet-genesis.json", name="subnet-genesis")
-    # subnet_genesis_with_teleporter = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json", name="subnet-genesis-with-teleporter")
-    # subnet_genesis_with_teleporter_tmpl = read_file("./static-files/example-subnet-genesis-with-teleporter.json.tmpl")
-    subnet_genesis_with_teleporter = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json.tmpl", "subnet_genesis_with_teleporter")
-    # subnet_genesis_with_teleporter = plan.render_templates(
-    #     config={
-    #         "example-subnet-genesis-with-teleporter.json": struct(
-    #             template=subnet_genesis_with_teleporter_tmpl,
-    #             data={
-    #                 "NetworkId":
-    #             },
-    #         )
-    #     },
-    #     name="subnet-genesis-with-teleporter",
-    # )
+    subnet_genesis_with_teleporter_tmpl = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json.tmpl", "subnet_genesis_with_teleporter")
+    etna_contracts = plan.upload_files("./static-files/contracts/")
 
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
@@ -49,8 +36,9 @@ def init(plan, node_cfg_map):
             files={
                 "/tmp/node-config": node_cfg,
                 "/tmp/subnet-genesis": Directory(
-                    artifact_names=[subnet_genesis,subnet_genesis_with_teleporter],
+                    artifact_names=[subnet_genesis_with_teleporter_tmpl],
                 ),
+                "/tmp/contracts/": etna_contracts
             }
         )
     )
@@ -84,14 +72,16 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
 
     return genesis_data, vm_id
 
-def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
-    plan.exec(
+def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, maybe_codespace_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
+    result = plan.exec(
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
             command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")]
         )
     )
+
+    plan.print("Create output: {0}".format(result["output"]))
 
     plan.exec(
         description="Adding validators for {0}".format(chain_name),
@@ -100,7 +90,6 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
             command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")]
         )
     )
-
 
     subnet_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/subnetId.txt".format(l1_counter))
     blockchain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/blockchainId.txt".format(subnet_id))
@@ -113,7 +102,8 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
         validator_ids.append(utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/node-{1}/validator_id.txt".format(subnet_id, index)))
 
     http_trimmed_uri = uri.replace("http://", "", 1)
-    return {
+
+    l1_config = {
         "SubnetId": subnet_id,
         "BlockchainId": blockchain_id, 
         "BlockchainIdHex": hex_blockchain_id,
@@ -125,3 +115,8 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, num_nodes, is_etn
         "PublicRPCEndpointBaseURL": "{0}/ext/bc/{1}/rpc".format(public_uri, blockchain_id),
         "WSEndpointBaseURL": "ws://{0}/ext/bc/{1}/ws".format(http_trimmed_uri, blockchain_id),
     }
+    
+    if maybe_codespace_uri != "":
+        l1_config["CodespaceRPCEndpointBaseURL"] = "{0}/ext/bc/{1}/rpc".format(maybe_codespace_uri, blockchain_id)
+
+    return l1_config

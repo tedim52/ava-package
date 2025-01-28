@@ -1,5 +1,6 @@
 builder = import_module("./builder/builder.star")
 utils = import_module("./utils.star")
+constants = import_module("./constants.star")
 
 NODE_ID_PATH = "/tmp/data/node-{0}/node_id.txt"
 BUILDER_SERVICE_NAME = "builder"
@@ -16,13 +17,14 @@ NODE_NAME_PREFIX = "node-"
 
 def launch(
     plan, 
+    network_id,
     genesis, 
     image, 
     node_count,  
     vmId, 
     custom_subnet_vm_url,
-    custom_subnet_vm_path):
-
+    custom_subnet_vm_path,
+    maybe_codespace_name):
     bootstrap_ips = []
     bootstrap_ids = []
     nodes = []
@@ -32,14 +34,12 @@ def launch(
     services = {}
     for index in range(0, node_count):
         node_name = NODE_NAME_PREFIX + str(index)
-
         node_data_dirpath = ABS_DATA_DIRPATH + node_name
         node_config_filepath = node_data_dirpath + "/config.json"
 
         launch_node_cmd = [
             "nohup",
             "/avalanchego/build/" + EXECUTABLE_PATH,
-            "--genesis-file=/tmp/data/genesis.json",
             "--data-dir=" + node_data_dirpath,
             "--config-file=" + node_config_filepath,
             "--http-host=0.0.0.0",
@@ -48,6 +48,9 @@ def launch(
             "--log-dir=/tmp/",
             "--network-health-min-conn-peers=" + str(node_count - 1),
         ]
+
+        if network_id != constants.FUJI_NETWORK_ID: # this flag is ignored when setting to fuji network
+            launch_node_cmd.append("--genesis-file=/tmp/data/genesis.json")
 
         plan.print("Creating node {0} with command {1}".format(node_name, launch_node_cmd))
 
@@ -59,9 +62,14 @@ def launch(
         log_files_cmds = ["touch /tmp/{0}".format(log_file) for log_file in log_files]
         log_file_cmd = " && ".join(log_files_cmds)
 
-        node_files = {
-            "/tmp/data": genesis
-        }
+        node_files = {}
+        node_files["/tmp/data"] = genesis
+
+        entrypoint=[]
+        if network_id == constants.FUJI_NETWORK_ID:
+            entrypoint=["/bin/sh", "-c", "{0} && {1}".format("mkdir -p {0}".format(ABS_PLUGIN_DIRPATH), " ".join(launch_node_cmd))]
+        else: 
+            entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"]
 
         if custom_subnet_vm_path:
             subnet_evm_plugin = plan.upload_files(custom_subnet_vm_path)
@@ -69,10 +77,10 @@ def launch(
 
         node_service_config = ServiceConfig(
             image=image,
-            entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"],
+            entrypoint=entrypoint,
             ports={
-                "rpc": PortSpec(number=9650, transport_protocol="TCP", wait=None),
-                "staking": PortSpec(number=9651, transport_protocol="TCP", wait=None)
+                "rpc": PortSpec(number=RPC_PORT_NUM, transport_protocol="TCP", wait=None),
+                "staking": PortSpec(number=STAKING_PORT_NUM, transport_protocol="TCP", wait=None)
             },
             files=node_files,
             public_ports=public_ports,
@@ -93,29 +101,31 @@ def launch(
             launch_node_cmd.append("--bootstrap-ips={0}".format(",".join(bootstrap_ips)))
             launch_node_cmd.append("--bootstrap-ids={0}".format(",".join(bootstrap_ids)))
 
-        plan.exec(
-            service_name=node_name,
-            recipe=ExecRecipe(
-                command=["mkdir", "-p", ABS_PLUGIN_DIRPATH]
+        if network_id != constants.FUJI_NETWORK_ID:
+            plan.exec(
+                service_name=node_name,
+                recipe=ExecRecipe(
+                    command=["mkdir", "-p", ABS_PLUGIN_DIRPATH]
+                )
             )
-        )
 
-        if custom_subnet_vm_path:
+            if custom_subnet_vm_path:
             cp(plan, node_name, "/tmp/data/hypersdk/" + vmId, ABS_PLUGIN_DIRPATH + vmId)
         elif custom_subnet_vm_url:
-            download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
+                download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
-        plan.exec(
-            description="Restarting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
-            service_name=node_name,
-            recipe=ExecRecipe(
-                command=["/bin/sh", "-c", " ".join(launch_node_cmd) + " >/dev/null 2>&1 &"],
+            plan.exec(
+                description="Starting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
+                service_name=node_name,
+                recipe=ExecRecipe(
+                    command=["/bin/sh", "-c", " ".join(launch_node_cmd) + " >/dev/null 2>&1 &"],
+                )
             )
-        )
 
-        bootstrap_ips.append("{0}:{1}".format(node.ip_address, 9651))
+        bootstrap_ips.append("{0}:{1}".format(node.ip_address, STAKING_PORT_NUM))
+
         bootstrap_id_file = NODE_ID_PATH.format(index)
-        bootstrap_id = utils.read_file_from_service(plan, "builder", bootstrap_id_file)
+        bootstrap_id = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, bootstrap_id_file)
         bootstrap_ids.append(bootstrap_id)
 
         node_info[node_name] = {
@@ -124,11 +134,13 @@ def launch(
             "launch-command": launch_node_cmd,
         }
 
-    wait_for_health(plan, "node-" + str(node_count - 1))
+        if maybe_codespace_name != "":
+            node_info[node_name]["codespace-rpc-url"] = "https://{0}-{1}.app.github.dev".format(maybe_codespace_name, RPC_PORT_NUM)
+        else:
+            node_info[node_name]["codespace-rpc-url"] = ""
 
-    # public_rpc_urls = []
-    # public_rpc_urls = ["http://{0}:{1}".format(PUBLIC_IP, RPC_PORT_NUM + index * 2) for index, node in
-    #                        enumerate(nodes)]
+    if network_id != constants.FUJI_NETWORK_ID: # fuji node won't become healthy till its bootstrapped, so skip health check
+        wait_for_health(plan, "node-" + str(node_count - 1)) 
 
     return node_info, NODE_NAME_PREFIX + "0"
 

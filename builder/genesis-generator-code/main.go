@@ -45,17 +45,22 @@ func main() {
 	}
 
 	networkIdArg := os.Args[networkIdIndex]
-	networkId, err := strconv.Atoi(networkIdArg)
-	if err != nil {
-		fmt.Printf("An error occurred while converting networkId arg to integer: %v\n", err)
-		os.Exit(nonZeroExitCode)
+	var networkId int
+	if networkIdArg == "fuji" {
+		networkId = 5
+	} else {
+		networkId, err = strconv.Atoi(networkIdArg)
+		if err != nil {
+			fmt.Printf("An error occurred while converting networkId arg to integer: %v\n", err)
+			os.Exit(nonZeroExitCode)
+		}
 	}
 
 	vmName := os.Args[vmNameArgIndex]
 
 	fmt.Printf("Have a total of '%v' nodes to generate and network id '%v'\n", numNodes, networkId)
-	// Every Node is a validator node for now
 
+	// Every Node is a validator node for now
 	var wg sync.WaitGroup
 	genesisValidators := make([]ids.NodeID, numNodes)
 	validatorsProofOfPossessions := make([]*signer.ProofOfPossession, numNodes)

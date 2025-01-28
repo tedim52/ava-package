@@ -1,0 +1,33 @@
+events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 9649;
+
+        location / {
+            # Forward requests to the upstream server
+            proxy_pass {{.Node1IpAddrAndPort}};
+
+            # Remove the header from upstream if it already exists
+            proxy_hide_header Access-Control-Allow-Origin;
+
+            # Add the CORS headers
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Origin, Content-Type, Accept, Authorization' always;
+
+            # Handle preflight OPTIONS requests
+            if ($request_method = 'OPTIONS') {
+                return 204;
+            }
+
+            # Proxy headers for the upstream server
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}

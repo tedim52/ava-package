@@ -1,5 +1,4 @@
 postgres = import_module("github.com/kurtosis-tech/postgres-package/main.star")
-# blockscout = import_module("github.com/tedim52/kurtosis-blockscout/main.star")
 
 def launch_blockscout(
     plan,
@@ -7,14 +6,9 @@ def launch_blockscout(
     chain_id,
     chain_rpc_url,
     chain_ws_url,
+    maybe_codespace_name,
     chain_num
 ):
-    # blockscout.run(plan, {
-        # "chain_name": chain_name,
-        # "chain_id": chain_id,
-        # "chain_rpc_url": chain_rpc_url,
-        # "chain_ws"url": chain_ws_url,
-    # })
     postgres_output = postgres.run(
         plan,
         service_name="blockscout-postgres-{0}".format(chain_name),
@@ -51,7 +45,6 @@ def launch_blockscout(
     blockscout_service = plan.add_service(
         name="blockscout-{0}".format(chain_name), 
         config=ServiceConfig(
-            # image="blockscout/blockscout:6.9.0",
             image="blockscout/blockscout:latest",
             ports={
                 "http": PortSpec(
@@ -70,17 +63,16 @@ def launch_blockscout(
                 "NETWORK": chain_name, 
                 "SUBNETWORK": chain_name,
                 "CHAIN_ID": str(chain_id),
-                # "CHAIN_TYPE": "ethereum",
                 "COIN": "ETH",
                 "ETHEREUM_JSONRPC_VARIANT": "geth", # avalanche subnet evms are 1:1 with geth
                 "ETHEREUM_JSONRPC_HTTP_URL": chain_rpc_url, 
-                "ETHEREUM_JSONRPC_TRACE_URL": chain_rpc_url, # TODO: whats the difference between http url
+                "ETHEREUM_JSONRPC_TRACE_URL": chain_rpc_url, 
                 "ETHEREUM_JSONRPC_WS_URL": chain_ws_url, 
                 "ETHEREUM_JSONRPC_HTTP_INSECURE": "true",
                 "DATABASE_URL": postgres_url,
                 "ECTO_USE_SSL": "false",
                 "MICROSERVICE_SC_VERIFIER_ENABLED": "true",
-                "MICROSERVICE_SC_VERIFIER_URL": verif_url, # what does the verifier do?
+                "MICROSERVICE_SC_VERIFIER_URL": verif_url, 
                 "MICROSERVICE_SC_VERIFIER_TYPE": "sc_verifier",
                 "INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER": "true",
                 "API_V2_ENABLED": "true",
@@ -90,68 +82,37 @@ def launch_blockscout(
         )
     )
     plan.print(blockscout_service)
-    # plan.exec(
-    #     description="""
-    #     Allow 3330s for blockscout to start indexing,
-    #     otherwise bs/Stats crashes because it expects to find content on DB
-    #     """,
-    #     service_name="blockscout-{0}".format(chain_name),
-    #     recipe=ExecRecipe(
-    #         command=["/bin/sh", "-c", "sleep 30"],
-    #     ),
-    # )
 
     blockscout_url = "http://{}:{}".format(blockscout_service.hostname, blockscout_service.ports["http"].number)
 
-    # stats
-    # stats_postgres_output = postgres.run(
-    #     plan,
-    #     service_name="blockscout-stats-postgres-{0}".format(chain_name),
-    #     database="stats",
-    # )
-    # stats = plan.add_service(
-    #     name="blockscout-stats-{0}".format(chain_name),
-    #     config=ServiceConfig(
-    #         image="ghcr.io/blockscout/stats:latest",
-    #         ports={
-    #             "stats": PortSpec(
-    #                 number=8050, 
-    #                 application_protocol="http", 
-    #                 wait="30s"
-    #             ),
-    #         },
-    #         env_vars={
-    #             "STATS__DB_URL": stats_postgres_output.url, 
-    #             "STATS__BLOCKSCOUT_DB_URL": postgres_url,
-    #             "STATS__CREATE_DATABASE": "false",
-    #             "STATS__RUN_MIGRATIONS": "true",
-    #             "STATS__SERVER__HTTP__CORS__ENABLED": "false",
-    #         },
-    #     ),
-    # )
-
-    # visualizer
-    # visualizer = plan.add_service(
-    #     name="blockscout-visualizer-{0}".format(chain_name),
-    #     config=ServiceConfig(
-    #         image="ghcr.io/blockscout/visualizer:latest",
-    #         ports={
-    #             "http": PortSpec(
-    #                 number=8050, 
-    #                 application_protocol="http"
-    #             ),
-    #         },
-    #     ),
-    # )
-
     # frontend
+    frontend_port_num = 3000 + chain_num
+
+    public_host = ""
+    public_host_uri = ""
+    next_public_app_port = 0
+    ws_protocol = ""
+    next_public_app_protocol = ""
+    if maybe_codespace_name != "":
+        public_host = "{0}-{1}.app.github.dev".format(maybe_codespace_name, frontend_port_num)
+        public_host_uri = "https://{0}".format(public_host)
+        next_public_app_port_num = 443 # codespace host is a proxy -
+        ws_protocol = "wss"
+        next_public_app_protocol = "https"
+    else:
+        public_host = "127.0.0.1"
+        public_host_uri = "http://{0}:{1}".format(public_host, frontend_port_num)
+        next_public_app_port_num = frontend_port_num
+        ws_protocol = "ws"
+        next_public_app_protocol = "http"
+
     blockscout_frontend = plan.add_service(
         name="blockscout-frontend-{0}".format(chain_name),
         config=ServiceConfig(
             image="ghcr.io/blockscout/frontend:latest",
             ports={
                 "http": PortSpec(
-                    number=3000 + chain_num,
+                    number=frontend_port_num,
                     transport_protocol="TCP",
                     application_protocol="http",
                     wait="30s",
@@ -166,33 +127,22 @@ def launch_blockscout(
                 )
             },
             env_vars={
-                "PORT": str(3000 + chain_num),
+                "PORT": str(frontend_port_num),
                 ## Blockchain configuration.
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#blockchain-parameters
                 "NEXT_PUBLIC_NETWORK_NAME": chain_name,
                 "NEXT_PUBLIC_NETWORK_ID": str(chain_id),
-                # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#rollup-chain
-                # "NEXT_PUBLIC_ROLLUP_TYPE": "zkEvm",
-                # "NEXT_PUBLIC_ROLLUP_L1_BASE_URL": l1_explorer,
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#transaction-interpretation
                 "NEXT_PUBLIC_TRANSACTION_INTERPRETATION_PROVIDER": "blockscout",
                 ## API configuration.
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#api-configuration
                 "NEXT_PUBLIC_API_PROTOCOL": "http",
                 "NEXT_PUBLIC_API_HOST": blockscout_service.ip_address + ":" + str(blockscout_service.ports["http"].number),
-                "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
-                # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#blockchain-statistics
-                # "NEXT_PUBLIC_STATS_API_HOST": "http://{}:{}".format(
-                #     stats.ip_address, stats.ports["stats"].number
-                # ),
-                # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#solidity-to-uml-diagrams
-                # "NEXT_PUBLIC_VISUALIZE_API_HOST": "http://{}:{}".format(
-                #     visualizer.ip_address, visualizer.ports["http"].number
-                # ),
+                "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": ws_protocol,
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#app-configuration
-                "NEXT_PUBLIC_APP_PROTOCOL": "http",
-                "NEXT_PUBLIC_APP_HOST": "127.0.0.1",
-                "NEXT_PUBLIC_APP_PORT": str(3000 + chain_num),
+                "NEXT_PUBLIC_APP_PROTOCOL": next_public_app_protocol,
+                "NEXT_PUBLIC_APP_HOST": public_host,
+                "NEXT_PUBLIC_APP_PORT": str(next_public_app_port_num),
                 "NEXT_PUBLIC_USE_NEXT_JS_PROXY": "true",
                 ## Remove ads.
                 # https://github.com/blockscout/frontend/blob/main/docs/ENVS.md#banner-ads
@@ -206,4 +156,4 @@ def launch_blockscout(
         ),
     )
 
-    return "http://127.0.0.1:{}".format(blockscout_frontend.ports["http"].number)
+    return public_host_uri
