@@ -1,5 +1,5 @@
-DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
-# DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.13"
+# DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.11"
+DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.11.13"
 ETNA_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.12.0-fuji"
 
 DEFAULT_SUBNET_EVM_BINARY_URL_FMT_STR = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.10/subnet-evm_0.6.10_linux_{0}.tar.gz"
