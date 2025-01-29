@@ -8,7 +8,6 @@ require (
 	github.com/ava-labs/coreth v0.13.9-rc.1
 	github.com/ava-labs/subnet-evm v0.6.13-0.20241205165027-6c98da796f35
 	github.com/ethereum/go-ethereum v1.13.14
-	github.com/stretchr/testify v1.10.0
 )
 
 require (
@@ -158,6 +157,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/status-im/keycard-go v0.2.0 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/supranational/blst v0.3.13 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect

@@ -3,12 +3,13 @@
     "node-cfg": {
         "network-id": "1337",
         "staking-enabled": false,
-        "health-check-frequency": "5s"
+        "health-check-frequency": "5s",
+        "log-level": "debug"
     },
     "chain-configs": [
         {
             "name": "myblockchain",
-            "vm": "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7",
+            "vm": "morpheusvm",
             "network-id": 555555,
             "enable-teleporter": true,
             "erc-20-token-name": "TED"

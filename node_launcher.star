@@ -22,8 +22,8 @@ def launch(
     image, 
     node_count,  
     vmId, 
-    custom_subnet_vm_url,
-    custom_subnet_vm_path,
+    custom_vm_url,
+    custom_vm_path,
     maybe_codespace_name):
     bootstrap_ips = []
     bootstrap_ids = []
@@ -71,9 +71,9 @@ def launch(
         else: 
             entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"]
 
-        if custom_subnet_vm_path:
-            subnet_evm_plugin = plan.upload_files(custom_subnet_vm_path)
-            node_files["/tmp/data/hypersdk"]=  subnet_evm_plugin
+        if custom_vm_path:
+            vm_plugin = plan.upload_files(custom_vm_path)
+            node_files["/tmp/data/hypersdk"]=  vm_plugin
 
         node_service_config = ServiceConfig(
             image=image,
@@ -109,10 +109,10 @@ def launch(
                 )
             )
 
-            if custom_subnet_vm_path:
-            cp(plan, node_name, "/tmp/data/hypersdk/" + vmId, ABS_PLUGIN_DIRPATH + vmId)
-        elif custom_subnet_vm_url:
-                download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
+            if custom_vm_path:
+                cp(plan, node_name, "/tmp/data/hypersdk/" + vmId, ABS_PLUGIN_DIRPATH + vmId)
+            elif custom_vm_url:
+                download_to_path_and_untar(plan, node_name, custom_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
             plan.exec(
                 description="Starting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
@@ -231,6 +231,7 @@ def download_to_path_and_untar(plan, node_name, url, dest):
 
 def cp(plan, node_name, src, dest):
     plan.exec(
+        description="Copying {0} to {1} on {2}".format(src, dest, node_name),
         service_name=node_name,
         recipe=ExecRecipe(
             command=["cp", src, dest]

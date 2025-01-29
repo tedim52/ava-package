@@ -3,7 +3,6 @@ utils = import_module('../utils.star')
 node_launcher = import_module('../node_launcher.star')
 
 def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_counter, chain_id, isEtna):
-    # TODO: support elastic l1 subnets
     # create subnet and blockchain for this l1
     node_rpc_uri = node_info[bootnode_name]["rpc-url"] 
     public_node_rpc_uri = node_info[bootnode_name]["public-rpc-url"] 

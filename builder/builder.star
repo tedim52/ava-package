@@ -22,8 +22,9 @@ def init(plan, node_cfg_map):
         name="node-cfg"
     )
 
-    subnet_genesis_with_teleporter_tmpl = plan.upload_files("./static-files/example-subnet-genesis-with-teleporter.json.tmpl", "subnet_genesis_with_teleporter")
+    subnetevm_genesis_with_teleporter_tmpl = plan.upload_files("./static-files/example-subnetevm-genesis-with-teleporter.json.tmpl", "subnetevm-genesis-with-teleporter")
     etna_contracts = plan.upload_files("./static-files/contracts/")
+    morpheusvm_genesis = plan.upload_files("./static-files/example-morpheusvm-genesis.json.tmpl", "morpheusvm-genesis")
 
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
@@ -36,7 +37,7 @@ def init(plan, node_cfg_map):
             files={
                 "/tmp/node-config": node_cfg,
                 "/tmp/subnet-genesis": Directory(
-                    artifact_names=[subnet_genesis_with_teleporter_tmpl],
+                    artifact_names=[subnetevm_genesis_with_teleporter_tmpl, morpheusvm_genesis],
                 ),
                 "/tmp/contracts/": etna_contracts
             }

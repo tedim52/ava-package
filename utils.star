@@ -43,7 +43,7 @@ def get_subnet_evm_url(plan, chain_configs):
 
 def get_avalanchego_img(chain_configs):
     if contains_etna_l1(chain_configs):
-        return constants.ETNA_AVALNCHEGO_IMAGE
+        return constants.ETNA_AVALANCHEGO_IMAGE
     else:
         return constants.DEFAULT_AVALANCHEGO_IMAGE
 
@@ -52,3 +52,8 @@ def contains_etna_l1(chain_configs):
         if chain.get("etna") == True:
             return True
     return False
+
+def get_vm_name(chain_configs):
+    if len(chain_configs) == 0:
+        return "subnetevm"
+    return chain_configs[0]["vm"]
