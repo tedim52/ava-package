@@ -13,5 +13,8 @@
             "network-id": 555555,
             "enable-teleporter": true
         }
-    ]
+    ],
+    "additional-services": {
+        "observability": true
+    }
 }
