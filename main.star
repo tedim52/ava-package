@@ -22,6 +22,7 @@ def run(plan, args):
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
     codespace_name = args.get('codespace-name', "")
+    cpu_arch = args.get("cpu-arch", "arm64") # only needs to bset now to get the correct morpheusvm path, once morpheusvm binaries are pulled from releases can detect cpu of architecture
     
     is_etna_deployment = utils.contains_etna_l1(chain_configs)
     vm_name = utils.get_vm_name(chain_configs)
@@ -37,7 +38,7 @@ def run(plan, args):
     maybe_vm_path = ""
     if vm_name == constants.HYPERSDK_VM_NAME:
         vm_id = constants.HYPERSDK_VM_ID
-        maybe_vm_path = utils.get_morpheusvm_binary_path(plan)
+        maybe_vm_path = utils.get_morpheusvm_binary_path(plan, cpu_arch)
 
     # start avalanche node network
     node_info, bootnode_name = node_launcher.launch(
