@@ -40,6 +40,7 @@ def launch(
         launch_node_cmd = [
             "nohup",
             "/avalanchego/build/" + EXECUTABLE_PATH,
+            "--plugin-dir=" + ABS_PLUGIN_DIRPATH,
             "--data-dir=" + node_data_dirpath,
             "--config-file=" + node_config_filepath,
             "--http-host=0.0.0.0",

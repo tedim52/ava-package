@@ -33,10 +33,11 @@ def run(plan, args):
 
     # generate genesis for primary network (p-chain, x-chain, c-chain)
     genesis, vm_id = builder.generate_genesis(plan, network_id, num_nodes, vm_name)
+
     maybe_vm_path = ""
     if vm_name == constants.HYPERSDK_VM_NAME:
         vm_id = constants.HYPERSDK_VM_ID
-        maybe_vm_path = "./l1/vms/linux/pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7"
+        maybe_vm_path = utils.get_morpheusvm_binary_path()
 
     # start avalanche node network
     node_info, bootnode_name = node_launcher.launch(
