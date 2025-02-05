@@ -37,7 +37,7 @@ def run(plan, args):
     maybe_vm_path = ""
     if vm_name == constants.HYPERSDK_VM_NAME:
         vm_id = constants.HYPERSDK_VM_ID
-        maybe_vm_path = utils.get_morpheusvm_binary_path()
+        maybe_vm_path = utils.get_morpheusvm_binary_path(plan)
 
     # start avalanche node network
     node_info, bootnode_name = node_launcher.launch(

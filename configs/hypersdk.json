@@ -11,8 +11,7 @@
             "name": "aaronsblockchain",
             "vm": "morpheusvm",
             "network-id": 555555,
-            "enable-teleporter": true,
-            "erc-20-token-name": "TED"
+            "enable-teleporter": true
         }
     ]
 }

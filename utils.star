@@ -41,13 +41,13 @@ def get_subnet_evm_url(plan, chain_configs):
     else:
         return constants.DEFAULT_SUBNET_EVM_BINARY_URL_FMT_STR.format(cpu_arch)
 
-def get_morpheusvm_binary_path()
-    cpu_arch_result = plan.run_sh(
-        description="Determining cpu architecture",
-        run="/bin/sh -c \"[ \"$(uname -m | tr -d '\n')\" = \"arm64\" ] || [ \"$(uname -m | tr -d '\n')\" = \"aarch64\" ] && echo -n arm64 || echo -n amd64\""
-    )
-    cpu_arch = cpu_arch_result.output
-    return "./l1/vms/morpheusvm/linux-{0}/pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7".format(cpu_arch)
+def get_morpheusvm_binary_path(plan):
+    # cpu_arch_result = plan.run_sh(
+    #     description="Determining cpu architecture",
+    #     run="/bin/sh -c \"[ \"$(uname -m | tr -d '\n')\" = \"arm64\" ] || [ \"$(uname -m | tr -d '\n')\" = \"aarch64\" ] && echo -n arm64 || echo -n amd64\""
+    # )
+    # cpu_arch = cpu_arch_result.output
+    return "./l1/vms/morpheusvm/linux-arm64/pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7"
 
 def get_avalanchego_img(chain_configs):
     if contains_etna_l1(chain_configs):
