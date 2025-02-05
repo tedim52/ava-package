@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"html/template"
@@ -15,11 +16,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ava-labs/avalanche-cli/cmd/blockchaincmd"
+	"github.com/ava-labs/avalanche-cli/pkg/constants"
+	"github.com/ava-labs/avalanche-cli/pkg/key"
+	"github.com/ava-labs/avalanche-cli/pkg/models"
 	"github.com/ava-labs/avalanche-cli/pkg/vm"
 	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/staking"
+	"github.com/ava-labs/avalanchego/utils/crypto/bls"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
+	"github.com/ava-labs/avalanchego/utils/formatting/address"
 	"github.com/ava-labs/avalanchego/utils/perms"
+	"github.com/ava-labs/avalanchego/utils/set"
+	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 	"github.com/ava-labs/avalanchego/vms/platformvm/txs"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/ava-labs/avalanchego/wallet/chain/c"
@@ -36,17 +46,18 @@ import (
 )
 
 const (
-	uriIndex               = 1
-	vmIDArgIndex           = 2
-	chainNameIndex         = 3
-	numValidatorNodesIndex = 4
-	isEtnaSubnetIndex      = 5
-	l1CounterIndex         = 6
-	chainIdIndex           = 7
-	operationIndex         = 8
-	minArgs                = 8
-	nonZeroExitCode        = 1
-	nodeIdPathFormat       = "/tmp/data/node-%d/node_id.txt"
+	uriIndex                  = 1
+	vmIDArgIndex              = 2
+	chainNameIndex            = 3
+	numValidatorNodesIndex    = 4
+	isEtnaSubnetIndex         = 5
+	l1CounterIndex            = 6
+	chainIdIndex              = 7
+	operationIndex            = 8
+	minArgs                   = 8
+	nonZeroExitCode           = 1
+	nodeIdPathFormat          = "/tmp/data/node-%d/node_id.txt"
+	nodeStakingInfoPathFormat = "/tmp/data/node-%d/staking"
 
 	// subnetEvmGenesisPath  = "/tmp/subnet-genesis/example-subnetevm-genesis-with-teleporter.json.tmpl"
 	// morpheusVmGenesisPath = "/tmp/subnet-genesis/example-morpheusvm-genesis.json.tmpl"
@@ -697,4 +708,139 @@ func getMorpheusVMGenesisBytes(chainId int, subnetId string) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func convertSubnetToL1(w wallet, subnetId ids.ID, chainId ids.ID, numValidators int) (ids.ID, error) {
+	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
+	softKey, err := key.NewSoft(5, key.WithPrivateKey(genesis.EWOQKey)) // 5 is testnet id, why thats needed? why isn't the chain id?
+	if err != nil {
+		return ids.Empty, fmt.Errorf("failed to create change owner address: %w", err)
+	}
+	changeOwnerAddress := softKey.P()[0] // whats the change owner address?
+
+	fmt.Printf("Using changeOwnerAddress: %s\n", changeOwnerAddress)
+
+	subnetAuthKeys, err := address.ParseToIDs([]string{changeOwnerAddress})
+	if err != nil {
+		return ids.Empty, fmt.Errorf("failed to parse subnet auth keys: %w", err)
+	}
+
+	managerAddress := geth_common.HexToAddress(ProxyContractAddress)
+	options := getMultisigTxOptions(subnetAuthKeys, kc)
+
+	var validators []models.SubnetValidator
+	for i := 0; i < numValidators; i++ {
+		nodeID, proofOfPossession, err := NodeInfoFromCreds(fmt.Sprintf(nodeStakingInfoPathFormat, i))
+		if err != nil {
+			return ids.Empty, fmt.Errorf("failed to get node info from creds: %w", err)
+		}
+
+		publicKey := "0x" + hex.EncodeToString(proofOfPossession.PublicKey[:])
+		pop := "0x" + hex.EncodeToString(proofOfPossession.ProofOfPossession[:])
+
+		validator := models.SubnetValidator{
+			NodeID:               nodeID.String(),
+			Weight:               constants.BootstrapValidatorWeight,
+			Balance:              1000000000,
+			BLSPublicKey:         publicKey,
+			BLSProofOfPossession: pop,
+			ChangeOwnerAddr:      changeOwnerAddress,
+		}
+		validators = append(validators, validator)
+	}
+
+	avaGoBootstrapValidators, err := blockchaincmd.ConvertToAvalancheGoSubnetValidator(validators)
+	if err != nil {
+		return ids.Empty, fmt.Errorf("failed to convert to AvalancheGo subnet validator: %w", err)
+	}
+
+	tx, err := w.p.P().IssueConvertSubnetToL1Tx(
+		subnetId,
+		chainId,
+		managerAddress.Bytes(),
+		avaGoBootstrapValidators,
+		options...,
+	)
+	if err != nil {
+		return ids.Empty, fmt.Errorf("an error occurred issueing convert subnet to l1 tx: %v", err)
+	}
+
+	return tx.TxID, nil
+}
+
+func NodeInfoFromCreds(folder string) (ids.NodeID, *signer.ProofOfPossession, error) {
+	if !strings.HasSuffix(folder, "/") {
+		folder += "/"
+	}
+
+	blsKey, err := LoadBLSKey(folder + "signer.key")
+	if err != nil {
+		return ids.NodeID{}, nil, fmt.Errorf("failed to load BLS key: %w", err)
+	}
+
+	pop := signer.NewProofOfPossession(blsKey)
+	certString, err := LoadText(folder + "staker.crt")
+	if err != nil {
+		return ids.NodeID{}, nil, fmt.Errorf("failed to load certificate: %w", err)
+	}
+
+	block, _ := pem.Decode([]byte(certString))
+	if block == nil || block.Type != "CERTIFICATE" {
+		panic("failed to decode PEM block containing certificate")
+	}
+
+	cert, err := staking.ParseCertificate(block.Bytes)
+	if err != nil {
+		panic("failed to decode PEM block containing certificate")
+	}
+
+	nodeID := ids.NodeIDFromCert(cert)
+
+	return nodeID, pop, nil
+}
+
+func LoadBLSKey(path string) (*bls.SecretKey, error) {
+	keyBytes, err := LoadBytes(path)
+	if err != nil {
+		return nil, err
+	}
+	key, err := bls.SecretKeyFromBytes(keyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("parsing BLS key from %s: %w", path, err)
+	}
+	return key, nil
+}
+
+func LoadBytes(path string) ([]byte, error) {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("loading bytes from %s: %w", path, err)
+	}
+	return bytes, nil
+}
+
+func LoadText(path string) (string, error) {
+	textBytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("loading text from %s: %w", path, err)
+	}
+	return strings.TrimSpace(string(textBytes)), nil
+}
+
+func getMultisigTxOptions(subnetAuthKeys []ids.ShortID, kc *secp256k1fx.Keychain) []common.Option {
+	options := []common.Option{}
+	walletAddrs := kc.Addresses().List()
+	changeAddr := walletAddrs[0]
+	// addrs to use for signing
+	customAddrsSet := set.Set[ids.ShortID]{}
+	customAddrsSet.Add(walletAddrs...)
+	customAddrsSet.Add(subnetAuthKeys...)
+	options = append(options, common.WithCustomAddresses(customAddrsSet))
+	// set change to go to wallet addr (instead of any other subnet auth key)
+	changeOwner := &secp256k1fx.OutputOwners{
+		Threshold: 1,
+		Addrs:     []ids.ShortID{changeAddr},
+	}
+	options = append(options, common.WithChangeOwner(changeOwner))
+	return options
 }
