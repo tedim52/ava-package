@@ -48,12 +48,13 @@ const (
 	nonZeroExitCode        = 1
 	nodeIdPathFormat       = "/tmp/data/node-%d/node_id.txt"
 
-	// TODO: pass this in via a variable
-	subnetEvmGenesisPath  = "/tmp/subnet-genesis/example-subnetevm-genesis-with-teleporter.json.tmpl"
-	morpheusVmGenesisPath = "/tmp/subnet-genesis/example-morpheusvm-genesis.json.tmpl"
-	// subnetEvmGenesisPath  = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-subnet-genesis-with-teleporter.json.tmpl"
-	// morpheusVmGenesisPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-morpheusvm-genesis.json.tmpl"
-	etnaContractsPath = "/tmp/contracts"
+	// subnetEvmGenesisPath  = "/tmp/subnet-genesis/example-subnetevm-genesis-with-teleporter.json.tmpl"
+	// morpheusVmGenesisPath = "/tmp/subnet-genesis/example-morpheusvm-genesis.json.tmpl"
+	// etnaContractsPath     = "/tmp/contracts"
+
+	subnetEvmGenesisPath  = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-subnet-genesis-with-teleporter.json.tmpl"
+	morpheusVmGenesisPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-morpheusvm-genesis.json.tmpl"
+	etnaContractsPath     = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/contracts"
 
 	// validate from a minute after now
 	startTimeDelayFromNow = 10 * time.Minute
@@ -63,7 +64,6 @@ const (
 	stakeWeight = uint64(200)
 
 	// outputs
-	// TODO: update these to store based on subnet id
 	parentPath           = "/tmp/subnet/%v/node-%d"
 	validatorIdsOutput   = "/tmp/subnet/%v/node-%d/validator_id.txt"
 	subnetIdParentPath   = "/tmp/subnet/%v"
@@ -78,7 +78,7 @@ const (
 	allocationDelimiter = ","
 	addrAllocDelimiter  = "="
 
-	// HyperSDKGenesisInitialBalance  uint64 = 3_000_000_000_000_000_000
+	MorpheusVmId                   = "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7"
 	HelperAddressesBalanceHexValue = "ffff86ac351052600000"
 	TeleporterDeployerAddress      = "0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC"
 	TxSpammerAddress               = "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC"
@@ -88,12 +88,6 @@ const (
 	RewardCalculatorAddress        = "0xDEADC0DE00000000000000000000000000000000"
 	ValidatorMessagesAddress       = "0xca11ab1e00000000000000000000000000000000"
 )
-
-// hardcoded initial set of ed25519 keys. Each will be initialized with InitialBalance
-// var hyperSdkInitKeys = []string{
-// 	"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
-// 	"8a7be2e0c9a2d09ac2861c34326d6fe5a461d920ba9c2b345ae28e603d517df148735063f8d5d8ba79ea4668358943e5c80bc09e9b2b9a15b5b15db6c1862e88", //nolint:lll
-// }
 
 type wallet struct {
 	p *primary.Wallet
@@ -181,21 +175,21 @@ func main() {
 		if isEtnaSubnet {
 			genesisData, err = getEtnaSubnetEVMGenesisBytes(genesis.EWOQKey, chainId, chainName)
 			if err != nil {
-				fmt.Printf("an error occurred getting etna subnet genesis data with chain id '%v':\n %v\n", chainId, err)
+				fmt.Printf("an error occurred getting etna subnet evm genesis data with chain id '%v':\n %v\n", chainId, err)
 				os.Exit(nonZeroExitCode)
 			}
-			fmt.Println("created genesis for: etna morpheusevm")
-		} else if vmID.String() == "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7" {
+			fmt.Println("created genesis for: etna subnet evm")
+		} else if vmID.String() == MorpheusVmId {
 			genesisData, err = getMorpheusVMGenesisBytes(chainId, subnetId.String())
 			if err != nil {
-				fmt.Printf("an error occurred getting HyperSDK genesis data with chain id '%v':\n %v\n", chainId, err)
+				fmt.Printf("an error occurred getting morpheusvm genesis data with chain id '%v':\n %v\n", chainId, err)
 				os.Exit(nonZeroExitCode)
 			}
 			fmt.Println("created genesis for: morpheusevm")
 		} else {
 			genesisData, err = getSubnetEVMGenesisBytes(subnetEvmGenesisPath, chainId)
 			if err != nil {
-				fmt.Printf("an error occurred converting subnet genesis tmpl into genesis data with chain id '%v':\n %v\n", chainId, err)
+				fmt.Printf("an error occurred converting subnet evm genesis tmpl into genesis data with chain id '%v':\n %v\n", chainId, err)
 				os.Exit(nonZeroExitCode)
 			}
 			fmt.Println("created genesis for: subnetevm")
@@ -204,12 +198,12 @@ func main() {
 		genesisJson := make(map[string]interface{})
 		err = json.Unmarshal(genesisData, &genesisJson)
 		if err != nil {
-			fmt.Printf("an error occurred unmarshaling subnet genesis data into map:\n%v", genesisData)
+			fmt.Printf("an error occurred unmarshaling genesis data into map:\n%v", genesisData)
 			os.Exit(nonZeroExitCode)
 		}
 		genesisJsonFile, err = json.MarshalIndent(genesisJson, "", "  ")
 		if err != nil {
-			fmt.Printf("an error occurred marshaling etna subnet genesis map into formatted json:\n%v", genesisJson)
+			fmt.Printf("an error occurred marshaling genesis map into formatted json:\n%v", genesisJson)
 			os.Exit(nonZeroExitCode)
 		}
 
@@ -312,49 +306,58 @@ func writeAddValidatorsOutput(subnetId ids.ID, validatorIds []ids.ID) error {
 	return nil
 }
 
-func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.ID, error) {
+func newWallet(uri string) (*wallet, error) {
 	ctx := context.Background()
-	var validatorIDs []ids.ID
-	for index := 0; index < numValidators; index++ {
-		nodeIdPath := fmt.Sprintf(nodeIdPathFormat, index)
-		nodeIdBytes, err := os.ReadFile(nodeIdPath)
-		if err != nil {
-			return nil, fmt.Errorf("an error occurred while reading node id '%v': %v", nodeIdPath, err)
-		}
-		nodeId, err := ids.NodeIDFromString(string(nodeIdBytes))
-		if err != nil {
-			return nil, fmt.Errorf("couldn't convert '%v' to node id", string(nodeIdBytes))
-		}
-		startTime := time.Now().Add(startTimeDelayFromNow)
-		endTime := startTime.Add(endTimeFromStartTime)
-		var addValidatorTx *txs.Tx
-		var txErr error
-		addValidatorTx, txErr = w.p.P().IssueAddSubnetValidatorTx(
-			&txs.SubnetValidator{
-				Validator: txs.Validator{
-					NodeID: nodeId,
-					Start:  uint64(startTime.Unix()),
-					End:    uint64(endTime.Unix()),
-					Wght:   stakeWeight,
-				},
-				Subnet: subnetId,
-			},
-			common.WithContext(ctx),
-			defaultPoll,
-		)
-		if txErr != nil {
-			return nil, fmt.Errorf("an error occurred while adding node '%v' as validator: %v", index, txErr)
-		}
-		validatorIDs = append(validatorIDs, addValidatorTx.ID())
-	}
+	fmt.Println(genesis.EWOQKey)
+	fmt.Println(genesis.EWOQKey.Address())
+	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
 
-	return validatorIDs, nil
+	// MakeWallet fetches the available UTXOs owned by [kc] on the network that [uri] is hosting.
+	walletSyncStartTime := time.Now()
+	createdWallet, err := primary.MakeWallet(ctx, uri, kc, kc, primary.WalletConfig{
+		SubnetIDs:     []ids.ID{},
+		ValidationIDs: []ids.ID{},
+	})
+	if err != nil {
+		log.Fatalf("failed to initialize wallet: %s\n", err)
+	}
+	log.Printf("synced wallet in %s\n", time.Since(walletSyncStartTime))
+
+	return &wallet{
+		p: createdWallet,
+		x: createdWallet.X(),
+		c: createdWallet.C(),
+	}, nil
+}
+
+func newWalletWithSubnet(uri string, subnetId ids.ID) (*wallet, error) {
+	ctx := context.Background()
+	fmt.Println(genesis.EWOQKey)
+	fmt.Println(genesis.EWOQKey.Address())
+	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
+
+	// MakeWallet fetches the available UTXOs owned by [kc] on the network that [uri] is hosting.
+	walletSyncStartTime := time.Now()
+	createdWallet, err := primary.MakeWallet(ctx, uri, kc, kc, primary.WalletConfig{
+		SubnetIDs:     []ids.ID{subnetId},
+		ValidationIDs: []ids.ID{},
+	})
+	if err != nil {
+		log.Fatalf("failed to initialize wallet: %s\n", err)
+	}
+	log.Printf("synced wallet in %s\n", time.Since(walletSyncStartTime))
+
+	return &wallet{
+		p: createdWallet,
+		x: createdWallet.X(),
+		c: createdWallet.C(),
+	}, nil
 }
 
 func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string, genesisData []byte) (ids.ID, string, map[string]string, string, error) {
 	var genesisChainId string
 	allocations := map[string]string{}
-	if vmId.String() != "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7" {
+	if vmId.String() != MorpheusVmId {
 		var genesis Genesis
 		if err := json.Unmarshal(genesisData, &genesis); err != nil {
 			return ids.Empty, "", nil, "", fmt.Errorf("an error occured while unmarshalling genesis json: %v", genesisData)
@@ -396,68 +399,43 @@ func createSubnet(w *wallet) (ids.ID, error) {
 	return createSubnetTx.ID(), nil
 }
 
-func newWalletWithSubnet(uri string, subnetId ids.ID) (*wallet, error) {
+func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.ID, error) {
 	ctx := context.Background()
-	fmt.Println(genesis.EWOQKey)
-	fmt.Println(genesis.EWOQKey.Address())
-	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
-
-	// MakeWallet fetches the available UTXOs owned by [kc] on the network that [uri] is hosting.
-	walletSyncStartTime := time.Now()
-	createdWallet, err := primary.MakeWallet(ctx, uri, kc, kc, primary.WalletConfig{
-		SubnetIDs:     []ids.ID{subnetId},
-		ValidationIDs: []ids.ID{},
-	})
-	if err != nil {
-		log.Fatalf("failed to initialize wallet: %s\n", err)
+	var validatorIDs []ids.ID
+	for index := 0; index < numValidators; index++ {
+		nodeIdPath := fmt.Sprintf(nodeIdPathFormat, index)
+		nodeIdBytes, err := os.ReadFile(nodeIdPath)
+		if err != nil {
+			return nil, fmt.Errorf("an error occurred while reading node id '%v': %v", nodeIdPath, err)
+		}
+		nodeId, err := ids.NodeIDFromString(string(nodeIdBytes))
+		if err != nil {
+			return nil, fmt.Errorf("couldn't convert '%v' to node id", string(nodeIdBytes))
+		}
+		startTime := time.Now().Add(startTimeDelayFromNow)
+		endTime := startTime.Add(endTimeFromStartTime)
+		var addValidatorTx *txs.Tx
+		var txErr error
+		addValidatorTx, txErr = w.p.P().IssueAddSubnetValidatorTx(
+			&txs.SubnetValidator{
+				Validator: txs.Validator{
+					NodeID: nodeId,
+					Start:  uint64(startTime.Unix()),
+					End:    uint64(endTime.Unix()),
+					Wght:   stakeWeight,
+				},
+				Subnet: subnetId,
+			},
+			common.WithContext(ctx),
+			defaultPoll,
+		)
+		if txErr != nil {
+			return nil, fmt.Errorf("an error occurred while adding node '%v' as validator: %v", index, txErr)
+		}
+		validatorIDs = append(validatorIDs, addValidatorTx.ID())
 	}
-	log.Printf("synced wallet in %s\n", time.Since(walletSyncStartTime))
 
-	return &wallet{
-		p: createdWallet,
-		x: createdWallet.X(),
-		c: createdWallet.C(),
-	}, nil
-}
-
-func newWallet(uri string) (*wallet, error) {
-	ctx := context.Background()
-	fmt.Println(genesis.EWOQKey)
-	fmt.Println(genesis.EWOQKey.Address())
-	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
-
-	// MakeWallet fetches the available UTXOs owned by [kc] on the network that [uri] is hosting.
-	walletSyncStartTime := time.Now()
-	createdWallet, err := primary.MakeWallet(ctx, uri, kc, kc, primary.WalletConfig{
-		SubnetIDs:     []ids.ID{},
-		ValidationIDs: []ids.ID{},
-	})
-	if err != nil {
-		log.Fatalf("failed to initialize wallet: %s\n", err)
-	}
-	log.Printf("synced wallet in %s\n", time.Since(walletSyncStartTime))
-
-	return &wallet{
-		p: createdWallet,
-		x: createdWallet.X(),
-		c: createdWallet.C(),
-	}, nil
-}
-
-func printBalances(w *wallet) error {
-	cChainAssets, err := w.c.Builder().GetBalance()
-	if err != nil {
-		return fmt.Errorf("could not get balance of wallet: %v", err)
-	}
-	fmt.Printf("cChain assets amount: %v\n", cChainAssets)
-	pChainAssets, err := w.p.P().Builder().GetBalance()
-	if err != nil {
-		return fmt.Errorf("could not get balance of wallet: %v", err)
-	}
-	for id, numAssets := range pChainAssets {
-		fmt.Printf("wallet has %v of asset with id %v\n", numAssets, id)
-	}
-	return nil
+	return validatorIDs, nil
 }
 
 func getSubnetEVMGenesisBytes(subnetGenesisFilePath string, chainId int) ([]byte, error) {
@@ -476,15 +454,6 @@ func getSubnetEVMGenesisBytes(subnetGenesisFilePath string, chainId int) ([]byte
 		return nil, err
 	}
 	return buf.Bytes(), nil
-}
-
-func BytesToAddress(b []byte) [20]byte {
-	var a [20]byte
-	if len(b) > len(a) {
-		b = b[len(b)-20:]
-	}
-	copy(a[20-len(b):], b)
-	return a
 }
 
 func getEtnaSubnetEVMGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName string) ([]byte, error) {
@@ -646,79 +615,6 @@ func getEtnaSubnetEVMGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, s
 	return genesisBytesWithWarpConfig, nil
 }
 
-func getMorpheusVMGenesisBytes(chainId int, subnetId string) ([]byte, error) {
-	// ed25519Addrs := make([]codec.Address, len(hyperSdkInitKeys))
-	// for i, keyHex := range hyperSdkInitKeys {
-	// 	privBytes, err := codec.LoadHex(keyHex, ed25519.PrivateKeyLen)
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	priv := ed25519.PrivateKey(privBytes)
-	// 	addr := auth.NewED25519Address(priv.PublicKey())
-	// 	ed25519Addrs[i] = addr
-	// }
-
-	// // allocate the initial balance to the addresses
-	// customAllocs := make([]*hypersdk_genesis.CustomAllocation, 0, len(ed25519Addrs))
-	// for _, prefundedAddr := range ed25519Addrs {
-	// 	customAllocs = append(customAllocs, &hypersdk_genesis.CustomAllocation{
-	// 		Address: prefundedAddr,
-	// 		Balance: HyperSDKGenesisInitialBalance,
-	// 	})
-	// }
-
-	// genesis := hypersdk_genesis.NewDefaultGenesis(customAllocs)
-
-	// // Set WindowTargetUnits to MaxUint64 for all dimensions to iterate full mempool during block building.
-	// genesis.Rules.WindowTargetUnits = hypersdk_fees.Dimensions{math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
-
-	// // Set all limits to MaxUint64 to avoid limiting block size for all dimensions except bandwidth. Must limit bandwidth to avoid building
-	// // a block that exceeds the maximum size allowed by AvalancheGo.
-	// genesis.Rules.MaxBlockUnits = hypersdk_fees.Dimensions{1800000, math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
-	// genesis.Rules.MinBlockGap = minBlockGap.Milliseconds()
-
-	// genesis.Rules.NetworkID = uint32(1)
-	// genesis.Rules.ChainID = ids.GenerateTestID()
-	// empty := ids.ID{}
-	// genesis.Rules.ChainID = empty.Prefix(uint64(chainId))
-
-	// genesisBytes, err := json.Marshal(genesis)
-	// if err != nil {
-	// 	return []byte{}, fmt.Errorf("error occurred marshing hypersdk genesis in json: %v", genesis)
-	// }
-	// fmt.Println(genesisBytes)
-	// fmt.Println(genesis)
-	tmpl, err := template.ParseFiles(morpheusVmGenesisPath)
-	if err != nil {
-		return nil, err
-	}
-	data := struct {
-		ChainId   int
-		NetworkId string
-	}{
-		ChainId:   chainId,
-		NetworkId: subnetId,
-	}
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, data)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-// func newDefaultAuthFactories() []hypersdk_chain.AuthFactory {
-// 	authFactories := make([]hypersdk_chain.AuthFactory, len(hyperSdkInitKeys))
-// 	for i, keyHex := range hyperSdkInitKeys {
-// 		bytes, err := codec.LoadHex(keyHex, ed25519.PrivateKeyLen)
-// 		if err != nil {
-// 			panic(err)
-// 		}
-// 		authFactories[i] = hypersdk_auth.NewED25519Factory(ed25519.PrivateKey(bytes))
-// 	}
-// 	return authFactories
-// }
-
 func loadHexFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -733,13 +629,13 @@ func loadHexFile(path string) ([]byte, error) {
 	return hex.DecodeString(string(cleanData))
 }
 
-type compiledJSON struct {
-	DeployedBytecode struct {
-		Object string `json:"object"`
-	} `json:"deployedBytecode"`
-}
-
 func loadDeployedHexFromJSON(path string, linkReferences map[string]string) ([]byte, error) {
+	type compiledJSON struct {
+		DeployedBytecode struct {
+			Object string `json:"object"`
+		} `json:"deployedBytecode"`
+	}
+
 	compiled := compiledJSON{}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -781,4 +677,24 @@ func loadDeployedHexFromJSON(path string, linkReferences map[string]string) ([]b
 	}
 
 	return hex.DecodeString(resultHex)
+}
+
+func getMorpheusVMGenesisBytes(chainId int, subnetId string) ([]byte, error) {
+	tmpl, err := template.ParseFiles(morpheusVmGenesisPath)
+	if err != nil {
+		return nil, err
+	}
+	data := struct {
+		ChainId   int
+		NetworkId string
+	}{
+		ChainId:   chainId,
+		NetworkId: subnetId,
+	}
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
