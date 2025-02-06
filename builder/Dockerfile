@@ -1,4 +1,5 @@
-FROM golang:1.22.10
+# Build stage
+FROM golang:1.22.10 AS builder
 
 WORKDIR /app
 
@@ -15,6 +16,17 @@ COPY . .
 RUN cd /app/subnet-creator-code && go build  -o ../subnet-creator .
 
 RUN cd /app/genesis-generator-code && go build  -o ../genesis-generator .
+
+# Runtime stage
+FROM ubuntu:latest
+
+WORKDIR /app
+
+COPY --from=builder /app/subnet-creator .
+
+COPY --from=builder /app/genesis-generator .
+
+
 
 
 
