@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -37,35 +38,35 @@ import (
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary"
 	"github.com/ava-labs/avalanchego/wallet/subnet/primary/common"
 	"github.com/ava-labs/coreth/plugin/evm"
+	poavalidatormanager "github.com/ava-labs/icm-contracts/abi-bindings/go/validator-manager/PoAValidatorManager"
+	"github.com/ava-labs/subnet-evm/accounts/abi/bind"
 	"github.com/ava-labs/subnet-evm/commontype"
 	"github.com/ava-labs/subnet-evm/core"
 	"github.com/ava-labs/subnet-evm/core/types"
+	"github.com/ava-labs/subnet-evm/ethclient"
+	"github.com/ava-labs/subnet-evm/interfaces"
 	"github.com/ava-labs/subnet-evm/params"
 	geth_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const (
-	uriIndex                  = 1
-	vmIDArgIndex              = 2
-	chainNameIndex            = 3
-	numValidatorNodesIndex    = 4
-	isEtnaSubnetIndex         = 5
-	l1CounterIndex            = 6
-	chainIdIndex              = 7
-	operationIndex            = 8
-	minArgs                   = 8
-	nonZeroExitCode           = 1
-	nodeIdPathFormat          = "/tmp/data/node-%d/node_id.txt"
-	nodeStakingInfoPathFormat = "/tmp/data/node-%d/staking"
+	uriIndex               = 1
+	vmIDArgIndex           = 2
+	chainNameIndex         = 3
+	numValidatorNodesIndex = 4
+	isEtnaSubnetIndex      = 5
+	l1CounterIndex         = 6
+	chainIdIndex           = 7
+	operationIndex         = 8
+	minArgs                = 8
+	nonZeroExitCode        = 1
 
-	// subnetEvmGenesisPath  = "/tmp/subnet-genesis/example-subnetevm-genesis-with-teleporter.json.tmpl"
-	// morpheusVmGenesisPath = "/tmp/subnet-genesis/example-morpheusvm-genesis.json.tmpl"
-	// etnaContractsPath     = "/tmp/contracts"
-
-	subnetEvmGenesisPath  = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-subnet-genesis-with-teleporter.json.tmpl"
-	morpheusVmGenesisPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-morpheusvm-genesis.json.tmpl"
-	etnaContractsPath     = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/contracts"
+	basePath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files"
+	// basePath = "/tmp/subnet-genesis"
+	subnetEvmGenesisPath  = basePath + "/example-subnetevm-genesis-with-teleporter.json.tmpl"
+	morpheusVmGenesisPath = basePath + "/example-morpheusvm-genesis.json.tmpl"
+	etnaContractsPath     = basePath + "/contracts"
 
 	// validate from a minute after now
 	startTimeDelayFromNow = 10 * time.Minute
@@ -75,15 +76,19 @@ const (
 	stakeWeight = uint64(200)
 
 	// outputs
-	parentPath           = "/tmp/subnet/%v/node-%d"
-	validatorIdsOutput   = "/tmp/subnet/%v/node-%d/validator_id.txt"
-	subnetIdParentPath   = "/tmp/subnet/%v"
-	subnetIdOutput       = "/tmp/subnet/%v/subnetId.txt"
-	blockchainIdOutput   = "/tmp/subnet/%v/blockchainId.txt"
-	hexChainIdOutput     = "/tmp/subnet/%v/hexChainId.txt"
-	genesisChainIdOutput = "/tmp/subnet/%v/genesisChainId.txt"
-	allocationsOutput    = "/tmp/subnet/%v/allocations.txt"
-	genesisFileOutput    = "/tmp/subnet/%v/genesis.json"
+	tmpDir = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/tmp"
+	// tmpDir                    = "/tmp"
+	nodeStakingInfoPathFormat = tmpDir + "/data/node-%d/staking"
+	nodeIdPathFormat          = tmpDir + "/data/node-%d/node_id.txt"
+	parentPath                = tmpDir + "/subnet/%v/node-%d"
+	validatorIdsOutput        = tmpDir + "/subnet/%v/node-%d/validator_id.txt"
+	subnetIdParentPath        = tmpDir + "/subnet/%v"
+	subnetIdOutput            = tmpDir + "/subnet/%v/subnetId.txt"
+	blockchainIdOutput        = tmpDir + "/subnet/%v/blockchainId.txt"
+	hexChainIdOutput          = tmpDir + "/subnet/%v/hexChainId.txt"
+	genesisChainIdOutput      = tmpDir + "/subnet/%v/genesisChainId.txt"
+	allocationsOutput         = tmpDir + "/subnet/%v/allocations.txt"
+	genesisFileOutput         = tmpDir + "/subnet/%v/genesis.json"
 
 	// delimiters
 	allocationDelimiter = ","
@@ -244,22 +249,48 @@ func main() {
 			os.Exit(nonZeroExitCode)
 		}
 
+		blockchainIdPath := fmt.Sprintf(subnetIdOutput, l1Num)
+		blockchainIdBytes, err := os.ReadFile(blockchainIdPath)
+		if err != nil {
+			fmt.Printf("an error occurred reading blockchain id '%v' file: %v", blockchainIdPath, err)
+			os.Exit(nonZeroExitCode)
+		}
+		fmt.Printf("retrieved blockchain id '%v'\n", string(subnetIdBytes))
+		blockchainId, err := ids.FromString(string(blockchainIdBytes))
+		if err != nil {
+			fmt.Printf("an error converting blockchain id '%v' to bytes: %v", string(blockchainIdBytes), err)
+			os.Exit(nonZeroExitCode)
+		}
+
 		w, err := newWalletWithSubnet(uri, subnetId)
 		if err != nil {
 			fmt.Printf("an error with creating subnet id wallet")
 			os.Exit(nonZeroExitCode)
 		}
 
-		var validatorIds []ids.ID
-		validatorIds, err = addSubnetValidators(w, subnetId, numValidatorNodes)
+		// var validatorIds []ids.ID
+		// validatorIds, err = addSubnetValidators(w, subnetId, numValidatorNodes)
+		// if err != nil {
+		// 	fmt.Printf("an error occurred while adding validators: %v\n", err)
+		// 	os.Exit(nonZeroExitCode)
+		// }
+		// fmt.Printf("validators added with ids '%v'\n", validatorIds)
+		// err = writeAddValidatorsOutput(subnetId, validatorIds)
+		// if err != nil {
+		// 	fmt.Printf("an error occurred while writing add validators outputs: %v\n", err)
+		// 	os.Exit(nonZeroExitCode)
+		// }
+
+		converstionTxId, err := convertSubnetToL1(w, subnetId, blockchainId, numValidatorNodes)
 		if err != nil {
-			fmt.Printf("an error occurred while adding validators: %v\n", err)
+			fmt.Printf("an error occurred while converting subnet to l1: %v\n", err)
 			os.Exit(nonZeroExitCode)
 		}
-		fmt.Printf("validators added with ids '%v'\n", validatorIds)
-		err = writeAddValidatorsOutput(subnetId, validatorIds)
+		fmt.Printf("subnet '%v' validating chain '%v' has been converted to l1 with tx '%s'", subnetId.String(), blockchainId.String(), converstionTxId.String())
+
+		err = initializeValidatorManagerContract(subnetId, blockchainId, uri)
 		if err != nil {
-			fmt.Printf("an error occurred while writing add validators outputs: %v\n", err)
+			fmt.Printf("an error occurred while initializing validator manager contract subnet to l1: %v\n", err)
 			os.Exit(nonZeroExitCode)
 		}
 	default:
@@ -710,7 +741,7 @@ func getMorpheusVMGenesisBytes(chainId int, subnetId string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func convertSubnetToL1(w wallet, subnetId ids.ID, chainId ids.ID, numValidators int) (ids.ID, error) {
+func convertSubnetToL1(w *wallet, subnetId ids.ID, chainId ids.ID, numValidators int) (ids.ID, error) {
 	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
 	softKey, err := key.NewSoft(5, key.WithPrivateKey(genesis.EWOQKey)) // 5 is testnet id, why thats needed? why isn't the chain id?
 	if err != nil {
@@ -843,4 +874,117 @@ func getMultisigTxOptions(subnetAuthKeys []ids.ShortID, kc *secp256k1fx.Keychain
 	}
 	options = append(options, common.WithChangeOwner(changeOwner))
 	return options
+}
+
+func initializeValidatorManagerContract(subnetId ids.ID, blockchainId ids.ID, nodeRpcUri string) error {
+	ecdsaKey, err := crypto.ToECDSA(genesis.EWOQKey.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to load private key: %w", err)
+	}
+
+	managerAddress := geth_common.HexToAddress(ProxyContractAddress)
+
+	ethClient, evmChainId, err := GetLocalEthClient(nodeRpcUri, blockchainId.String())
+	if err != nil {
+		return fmt.Errorf("failed to connect to client: %w", err)
+	}
+
+	opts, err := bind.NewKeyedTransactorWithChainID(genesis.EWOQKey.ToECDSA(), evmChainId)
+	if err != nil {
+		return fmt.Errorf("failed to create transactor: %w", err)
+	}
+	opts.GasLimit = 8000000
+	opts.GasPrice = nil
+
+	_, tx, err := initializeValidatorManagerPoA("poa", managerAddress, ethClient, subnetId, opts, ecdsaKey.PublicKey)
+	if err != nil {
+		return fmt.Errorf("failed to initialize validator manager: %w", err)
+	}
+
+	fmt.Printf("Validator Manager initialized: %v\n", tx.Hash().Hex())
+	return nil
+}
+
+func initializeValidatorManagerPoA(validatorManagerType string, managerAddress geth_common.Address, ethClient ethclient.Client, subnetID ids.ID, opts *bind.TransactOpts, ecdsaPubKey ecdsa.PublicKey) (*types.Receipt, *types.Transaction, error) {
+	logs, err := ethClient.FilterLogs(context.Background(), interfaces.FilterQuery{
+		Addresses: []geth_common.Address{managerAddress},
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get contract logs: %w", err)
+	}
+
+	// Replace sleep with transaction wait
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	contract, err := poavalidatormanager.NewPoAValidatorManager(managerAddress, ethClient)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create contract instance: %w", err)
+	}
+	for _, vLog := range logs {
+		if _, err := contract.ParseInitialized(vLog); err == nil {
+			log.Printf("Validator manager was already initialized")
+			return nil, nil, nil
+		}
+	}
+
+	tx, err := contract.Initialize(opts, poavalidatormanager.ValidatorManagerSettings{
+		L1ID:                   subnetID,
+		ChurnPeriodSeconds:     0,
+		MaximumChurnPercentage: 20,
+	}, crypto.PubkeyToAddress(ecdsaPubKey))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialize validator manager: %w", err)
+	}
+
+	receipt, err := bind.WaitMined(ctx, ethClient, tx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to wait for transaction confirmation: %w", err)
+	}
+
+	return receipt, tx, nil
+}
+
+func GetLocalEthClient(nodeRpcUri string, blockchainId string) (ethclient.Client, *big.Int, error) {
+	const maxAttempts = 100
+	nodeURL := fmt.Sprintf("%s/ext/bc/%s/rpc", nodeRpcUri, blockchainId)
+
+	var err error
+	var client ethclient.Client
+	var evmChainId *big.Int
+	var lastErr error
+
+	sleepSeconds := 5
+
+	for i := 0; i < maxAttempts; i++ {
+		if i > 0 {
+			log.Printf("Attempt %d/%d to connect to node (will sleep for %d seconds before retry)",
+				i+1, maxAttempts, sleepSeconds)
+		}
+
+		client, err = ethclient.DialContext(context.Background(), nodeURL)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to connect to node: %s", err)
+			if i > 0 {
+				fmt.Printf("Failed to connect: %s\n", err)
+			}
+			time.Sleep(time.Duration(sleepSeconds) * time.Second)
+			continue
+		}
+
+		evmChainId, err = client.ChainID(context.Background())
+		if err != nil {
+			lastErr = fmt.Errorf("failed to get chain ID: %s", err)
+			if i > 0 {
+				log.Printf("chain is not ready yet: %s (will sleep for %d seconds before retry)\n",
+					strings.TrimSpace(string(lastErr.Error())), sleepSeconds)
+			}
+			time.Sleep(time.Duration(sleepSeconds) * time.Second)
+			continue
+		}
+
+		return client, evmChainId, nil
+	}
+
+	return nil, nil, fmt.Errorf("failed after %d attempts with error: %w", maxAttempts, lastErr)
 }
