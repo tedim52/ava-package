@@ -70,11 +70,14 @@ const (
 	minArgs                = 8
 	nonZeroExitCode        = 1
 
-	basePath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files"
-	// basePath = "/tmp/subnet-genesis"
-	subnetEvmGenesisPath  = basePath + "/example-subnetevm-genesis-with-teleporter.json.tmpl"
-	morpheusVmGenesisPath = basePath + "/example-morpheusvm-genesis.json.tmpl"
-	etnaContractsPath     = basePath + "/contracts"
+	// baseGenesisPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files"
+	baseGenesisPath       = "/tmp/subnet-genesis"
+	subnetEvmGenesisPath  = baseGenesisPath + "/example-subnetevm-genesis-with-teleporter.json.tmpl"
+	morpheusVmGenesisPath = baseGenesisPath + "/example-morpheusvm-genesis.json.tmpl"
+
+	// baseContractsPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files"
+	baseContractsPath = "/tmp"
+	etnaContractsPath = baseContractsPath + "/contracts"
 
 	// validate from a minute after now
 	startTimeDelayFromNow = 10 * time.Minute
@@ -84,8 +87,8 @@ const (
 	stakeWeight = uint64(200)
 
 	// outputs
-	tmpDir = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/tmp"
-	// tmpDir                    = "/tmp"
+	// tmpDir = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/tmp"
+	tmpDir                    = "/tmp"
 	nodeStakingInfoPathFormat = tmpDir + "/data/node-%d/staking"
 	nodeIdPathFormat          = tmpDir + "/data/node-%d/node_id.txt"
 	parentPath                = tmpDir + "/subnet/%v/node-%d"
@@ -176,7 +179,7 @@ func main() {
 
 	fmt.Printf("trying uri '%v' vmID '%v' chainName '%v' and numValidatorNodes '%v'", uri, vmIDStr, chainName, numValidatorNodes)
 	switch operation {
-	case "create":
+	case "createsubnetandblockchain":
 		w, err := newWallet(uri)
 		if err != nil {
 			fmt.Printf("Couldn't create wallet \n")
@@ -245,7 +248,8 @@ func main() {
 			fmt.Printf("an error occurred while writing create outputs: %v\n", err)
 			os.Exit(nonZeroExitCode)
 		}
-	case "addvalidators":
+	case "convertsubnettol1":
+		// TODO: use load functions to decrease loc here
 		subnetIdPath := fmt.Sprintf(subnetIdOutput, l1Num)
 		subnetIdBytes, err := os.ReadFile(subnetIdPath)
 		if err != nil {
@@ -278,36 +282,66 @@ func main() {
 			os.Exit(nonZeroExitCode)
 		}
 
-		// var validatorIds []ids.ID
-		// validatorIds, err = addSubnetValidators(w, subnetId, numValidatorNodes)
-		// if err != nil {
-		// 	fmt.Printf("an error occurred while adding validators: %v\n", err)
-		// 	os.Exit(nonZeroExitCode)
-		// }
-		// fmt.Printf("validators added with ids '%v'\n", validatorIds)
-		// err = writeAddValidatorsOutput(subnetId, validatorIds)
-		// if err != nil {
-		// 	fmt.Printf("an error occurred while writing add validators outputs: %v\n", err)
-		// 	os.Exit(nonZeroExitCode)
-		// }
-
-		converstionTxId, err := convertSubnetToL1(w, subnetId, blockchainId, numValidatorNodes)
+		if isEtnaSubnet {
+			converstionTxId, err := convertSubnetToL1(w, subnetId, blockchainId, numValidatorNodes)
+			if err != nil {
+				fmt.Printf("an error occurred while converting subnet to l1: %v\n", err)
+				os.Exit(nonZeroExitCode)
+			}
+			fmt.Printf("subnet '%v' validating chain '%v' has been converted to l1 with tx '%s'", subnetId.String(), blockchainId.String(), converstionTxId.String())
+		} else {
+			var validatorIds []ids.ID
+			validatorIds, err = addSubnetValidators(w, subnetId, numValidatorNodes)
+			if err != nil {
+				fmt.Printf("an error occurred while adding validators: %v\n", err)
+				os.Exit(nonZeroExitCode)
+			}
+			fmt.Printf("validators added with ids '%v'\n", validatorIds)
+			err = writeAddValidatorsOutput(subnetId, validatorIds)
+			if err != nil {
+				fmt.Printf("an error occurred while writing add validators outputs: %v\n", err)
+				os.Exit(nonZeroExitCode)
+			}
+		}
+	case "initvalidatorset":
+		subnetIdPath := fmt.Sprintf(subnetIdOutput, l1Num)
+		subnetIdBytes, err := os.ReadFile(subnetIdPath)
 		if err != nil {
-			fmt.Printf("an error occurred while converting subnet to l1: %v\n", err)
+			fmt.Printf("an error occurred reading subnet id '%v' file: %v", subnetIdPath, err)
 			os.Exit(nonZeroExitCode)
 		}
-		fmt.Printf("subnet '%v' validating chain '%v' has been converted to l1 with tx '%s'", subnetId.String(), blockchainId.String(), converstionTxId.String())
-
-		err = initializeValidatorManagerContract(subnetId, blockchainId, uri)
+		fmt.Printf("retrieved subnet id '%v'\n", string(subnetIdBytes))
+		subnetId, err := ids.FromString(string(subnetIdBytes))
 		if err != nil {
-			fmt.Printf("an error occurred while initializing validator manager contract subnet to l1: %v\n", err)
+			fmt.Printf("an error converting subnet id '%v' to bytes: %v", string(subnetIdBytes), err)
 			os.Exit(nonZeroExitCode)
 		}
 
-		err = initializeValidatorSet(subnetId, blockchainId, numValidatorNodes, uri)
+		blockchainIdPath := fmt.Sprintf(subnetIdOutput, l1Num)
+		blockchainIdBytes, err := os.ReadFile(blockchainIdPath)
 		if err != nil {
-			fmt.Printf("an error occurred while initializing validator set: %v\n", err)
+			fmt.Printf("an error occurred reading blockchain id '%v' file: %v", blockchainIdPath, err)
 			os.Exit(nonZeroExitCode)
+		}
+		fmt.Printf("retrieved blockchain id '%v'\n", string(subnetIdBytes))
+		blockchainId, err := ids.FromString(string(blockchainIdBytes))
+		if err != nil {
+			fmt.Printf("an error converting blockchain id '%v' to bytes: %v", string(blockchainIdBytes), err)
+			os.Exit(nonZeroExitCode)
+		}
+
+		if isEtnaSubnet {
+			err = initializeValidatorManagerContract(subnetId, blockchainId, uri)
+			if err != nil {
+				fmt.Printf("an error occurred while initializing validator manager contract subnet to l1: %v\n", err)
+				os.Exit(nonZeroExitCode)
+			}
+
+			err = initializeValidatorSet(subnetId, blockchainId, numValidatorNodes, uri)
+			if err != nil {
+				fmt.Printf("an error occurred while initializing validator set: %v\n", err)
+				os.Exit(nonZeroExitCode)
+			}
 		}
 	default:
 		fmt.Println("Operation not supported.")
