@@ -19,19 +19,27 @@ import (
 
 	"github.com/ava-labs/avalanche-cli/cmd/blockchaincmd"
 	"github.com/ava-labs/avalanche-cli/pkg/constants"
+	"github.com/ava-labs/avalanche-cli/pkg/contract"
 	"github.com/ava-labs/avalanche-cli/pkg/key"
 	"github.com/ava-labs/avalanche-cli/pkg/models"
 	"github.com/ava-labs/avalanche-cli/pkg/vm"
+	"github.com/ava-labs/avalanche-cli/sdk/interchain"
+	"github.com/ava-labs/avalanche-cli/sdk/validatormanager"
 	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/staking"
+	avagoconstants "github.com/ava-labs/avalanchego/utils/constants"
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/ava-labs/avalanchego/utils/formatting/address"
+	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/perms"
 	"github.com/ava-labs/avalanchego/utils/set"
 	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
 	"github.com/ava-labs/avalanchego/vms/platformvm/txs"
+	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
+	"github.com/ava-labs/avalanchego/vms/platformvm/warp/message"
+	"github.com/ava-labs/avalanchego/vms/platformvm/warp/payload"
 	"github.com/ava-labs/avalanchego/vms/secp256k1fx"
 	"github.com/ava-labs/avalanchego/wallet/chain/c"
 	"github.com/ava-labs/avalanchego/wallet/chain/x"
@@ -103,6 +111,8 @@ const (
 	ProxyContractAddress           = "0xFEEDC0DE0000000000000000000000000000000"
 	RewardCalculatorAddress        = "0xDEADC0DE00000000000000000000000000000000"
 	ValidatorMessagesAddress       = "0xca11ab1e00000000000000000000000000000000"
+
+	KurtosisAvalancheLocalNetworkId = 1337
 )
 
 type wallet struct {
@@ -291,6 +301,12 @@ func main() {
 		err = initializeValidatorManagerContract(subnetId, blockchainId, uri)
 		if err != nil {
 			fmt.Printf("an error occurred while initializing validator manager contract subnet to l1: %v\n", err)
+			os.Exit(nonZeroExitCode)
+		}
+
+		err = initializeValidatorSet(subnetId, blockchainId, numValidatorNodes, uri)
+		if err != nil {
+			fmt.Printf("an error occurred while initializing validator set: %v\n", err)
 			os.Exit(nonZeroExitCode)
 		}
 	default:
@@ -743,7 +759,7 @@ func getMorpheusVMGenesisBytes(chainId int, subnetId string) ([]byte, error) {
 
 func convertSubnetToL1(w *wallet, subnetId ids.ID, chainId ids.ID, numValidators int) (ids.ID, error) {
 	kc := secp256k1fx.NewKeychain(genesis.EWOQKey)
-	softKey, err := key.NewSoft(5, key.WithPrivateKey(genesis.EWOQKey)) // 5 is testnet id, why thats needed? why isn't the chain id?
+	softKey, err := key.NewSoft(KurtosisAvalancheLocalNetworkId, key.WithPrivateKey(genesis.EWOQKey)) // 1337 is the network id, why thats needed? pass that in via args
 	if err != nil {
 		return ids.Empty, fmt.Errorf("failed to create change owner address: %w", err)
 	}
@@ -987,4 +1003,125 @@ func GetLocalEthClient(nodeRpcUri string, blockchainId string) (ethclient.Client
 	}
 
 	return nil, nil, fmt.Errorf("failed after %d attempts with error: %w", maxAttempts, lastErr)
+}
+
+func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators int, nodeRpcUri string) error {
+	managerAddress := geth_common.HexToAddress(ProxyContractAddress)
+
+	type InitialValidatorPayload struct {
+		NodeID       []byte
+		BlsPublicKey []byte
+		Weight       uint64
+	}
+	var validators []message.SubnetToL1ConversionValidatorData
+	var validatorPayloads []InitialValidatorPayload
+	for i := 0; i < numValidators; i++ {
+		nodeID, proofOfPossession, err := NodeInfoFromCreds(fmt.Sprintf(nodeStakingInfoPathFormat, i))
+		if err != nil {
+			return fmt.Errorf("failed to get node info from creds: %w", err)
+		}
+
+		validator := message.SubnetToL1ConversionValidatorData{
+			NodeID:       nodeID[:],
+			BLSPublicKey: proofOfPossession.PublicKey,
+			Weight:       constants.BootstrapValidatorWeight,
+		}
+		validators = append(validators, validator)
+		validatorPayloads = append(validatorPayloads, InitialValidatorPayload{
+			NodeID:       validator.NodeID,
+			BlsPublicKey: validator.BLSPublicKey[:],
+			Weight:       validator.Weight,
+		})
+	}
+
+	subnetConversionData := message.SubnetToL1ConversionData{
+		SubnetID:       subnetId,
+		ManagerChainID: blockchainId,
+		ManagerAddress: managerAddress.Bytes(),
+		Validators:     validators,
+	}
+	subnetConversionId, err := message.SubnetToL1ConversionID(subnetConversionData)
+	if err != nil {
+		return fmt.Errorf("failed to create subnet conversion ID: %w", err)
+	}
+
+	addressedCallPayload, err := message.NewSubnetToL1Conversion(subnetConversionId)
+	if err != nil {
+		return fmt.Errorf("failed to create addressed call payload: %w", err)
+	}
+
+	subnetConversionAddressedCall, err := payload.NewAddressedCall(
+		nil,
+		addressedCallPayload.Bytes(),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create addressed call payload: %w", err)
+	}
+
+	network := models.NewLocalNetwork() // careful - under the hood this sets the endpoint as the localhost endpoint which won't connect to the node when this is run inside the enclave
+
+	subnetConversionUnsignedMessage, err := warp.NewUnsignedMessage(
+		network.ID,
+		avagoconstants.PlatformChainID,
+		subnetConversionAddressedCall.Bytes(),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create unsigned message: %w", err)
+	}
+
+	peers, err := blockchaincmd.ConvertURIToPeers([]string{nodeRpcUri}) // do we need to aggregate signatures from all the peers? if so we need to get the node rpc uri's of all the peers
+	if err != nil {
+		return fmt.Errorf("failed to get extra peers: %w", err)
+	}
+
+	signatureAggregator, err := interchain.NewSignatureAggregator(
+		network,
+		logging.Level(logging.Info),
+		subnetId,
+		interchain.DefaultQuorumPercentage,
+		true,
+		peers,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create signature aggregator: %w", err)
+	}
+
+	subnetConversionSignedMessage, err := signatureAggregator.Sign(subnetConversionUnsignedMessage, subnetId[:])
+	if err != nil {
+		return fmt.Errorf("failed to sign subnet conversion unsigned message: %w", err)
+	}
+
+	type SubnetConversionDataPayload struct {
+		SubnetID                     [32]byte
+		ValidatorManagerBlockchainID [32]byte
+		ValidatorManagerAddress      geth_common.Address
+		InitialValidators            []InitialValidatorPayload
+	}
+
+	subnetConversionDataPayload := SubnetConversionDataPayload{
+		SubnetID:                     subnetId,
+		ValidatorManagerBlockchainID: blockchainId,
+		ValidatorManagerAddress:      managerAddress,
+		InitialValidators:            validatorPayloads,
+	}
+
+	tx, _, err := contract.TxToMethodWithWarpMessage(
+		fmt.Sprintf("%s/ext/bc/%s/rpc", nodeRpcUri, blockchainId),
+		strings.TrimSpace(genesis.EWOQKey.String()),
+		managerAddress,
+		subnetConversionSignedMessage,
+		big.NewInt(0),
+		"initialize validator set",
+		validatormanager.ErrorSignatureToError,
+		"initializeValidatorSet((bytes32,bytes32,address,[(bytes,bytes,uint64)]),uint32)",
+		subnetConversionDataPayload,
+		uint32(0),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize validator set: %w", err)
+	}
+
+	fmt.Printf(" Successfully initialized validator set. Transaction hash: %s\n", tx.Hash().String())
+
+	return nil
 }
