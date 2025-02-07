@@ -145,7 +145,7 @@ def launch(
 
     return node_info, NODE_NAME_PREFIX + "0"
 
-def track_subnet(plan, node_name, node_info, chain_id):
+def track_subnet(plan, node_name, node_info, blockchain_id, blockchain_name):
     subnet_ids = utils.read_file_from_service(plan, builder.BUILDER_SERVICE_NAME, "/tmp/data/subnet_ids.txt")
     node_info["launch-command"].append("--track-subnets={0}".format(subnet_ids))
 
@@ -160,13 +160,13 @@ def track_subnet(plan, node_name, node_info, chain_id):
 
     subnet_evm_config = read_file("./builder/static-files/subnetevm-config.json")
     node_data_dirpath = ABS_DATA_DIRPATH + node_name
-    subnet_evm_config_dir_path = "{0}/configs/chains/{1}".format(node_data_dirpath, chain_id)
+    subnet_evm_config_dir_path = "{0}/configs/chains/{1}".format(node_data_dirpath, blockchain_id)
     plan.exec(
         service_name=node_name,
         recipe=ExecRecipe(
             command=["/bin/sh", "-c", "mkdir -p {0} && echo '{1}' >> {0}/config.json".format(subnet_evm_config_dir_path, subnet_evm_config)]
         ),
-        description="Creating chain config for {0} on {1}".format(chain_id, node_name)
+        description="Creating chain config for {0} on {1}".format(blockchain_id, node_name)
     )
 
     plan.exec(
@@ -174,11 +174,12 @@ def track_subnet(plan, node_name, node_info, chain_id):
         recipe=ExecRecipe(
             command=["/bin/sh", "-c", " ".join(node_info["launch-command"]) + " >/dev/null 2>&1 &"],
         ),
-        description="Restarting avalanche go on {0}".format(node_name),
+        description="Restarting avalanche go on {0} to track blockchain {1}".format(node_name, blockchain_name),
     )
 
 def wait_for_health(plan, node_name):
     response = plan.wait(
+        description="Waiting for {0} to be healthy".format(node_name),
         service_name=node_name,
         recipe=PostHttpRequestRecipe(
             port_id=RPC_PORT_ID,
