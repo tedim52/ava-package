@@ -80,8 +80,8 @@ def launch(
             image=image,
             entrypoint=entrypoint,
             ports={
-                "rpc": PortSpec(number=RPC_PORT_NUM, transport_protocol="TCP", wait=None),
-                "staking": PortSpec(number=STAKING_PORT_NUM, transport_protocol="TCP", wait=None)
+                "rpc": PortSpec(number=RPC_PORT_NUM, application_protocol="http", transport_protocol="TCP", wait=None),
+                "staking": PortSpec(number=STAKING_PORT_NUM, application_protocol="http", transport_protocol="TCP", wait=None)
             },
             files=node_files,
             public_ports=public_ports,
