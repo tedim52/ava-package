@@ -13,6 +13,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/ava-labs/avalanche-cli/pkg/vm"
 	"github.com/ava-labs/avalanche-cli/sdk/interchain"
 	"github.com/ava-labs/avalanche-cli/sdk/validatormanager"
+	"github.com/ava-labs/avalanchego/api/info"
 	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/staking"
@@ -32,7 +34,7 @@ import (
 	"github.com/ava-labs/avalanchego/utils/crypto/bls"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/ava-labs/avalanchego/utils/formatting/address"
-	"github.com/ava-labs/avalanchego/utils/logging"
+	avalogging "github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/perms"
 	"github.com/ava-labs/avalanchego/utils/set"
 	"github.com/ava-labs/avalanchego/vms/platformvm/signer"
@@ -847,6 +849,9 @@ func convertSubnetToL1(w *wallet, subnetId ids.ID, chainId ids.ID, numValidators
 	if err != nil {
 		return ids.Empty, fmt.Errorf("failed to convert to AvalancheGo subnet validator: %w", err)
 	}
+	for idx, validator := range avaGoBootstrapValidators {
+		fmt.Printf("Ava Go Bootstrap Validators: %v %v", idx, validator.NodeID)
+	}
 
 	tx, err := w.p.P().IssueConvertSubnetToL1Tx(
 		subnetId,
@@ -1083,6 +1088,12 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 			Weight:       validator.Weight,
 		})
 	}
+	slices.SortFunc(validators, func(a, b message.SubnetToL1ConversionValidatorData) int {
+		return bytes.Compare(a.NodeID, b.NodeID)
+	})
+	for idx, validator := range validators {
+		fmt.Printf("Bootstrap Validators: %v %v", idx, validator.NodeID)
+	}
 
 	subnetConversionData := message.SubnetToL1ConversionData{
 		SubnetID:       subnetId,
@@ -1119,23 +1130,25 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 		return fmt.Errorf("failed to create unsigned message: %w", err)
 	}
 
-	peers, err := blockchaincmd.ConvertURIToPeers([]string{nodeRpcUri}) // do we need to aggregate signatures from all the peers? if so we need to get the node rpc uri's of all the peers
-	if err != nil {
-		return fmt.Errorf("failed to get extra peers: %w", err)
-	}
+	// peers, err := blockchaincmd.ConvertURIToPeers([]string{nodeRpcUri}) // do we need to aggregate signatures from all the peers? if so we need to get the node rpc uri's of all the peers
+	// if err != nil {
+	// 	return fmt.Errorf("failed to get extra peers: %w", err)
+	// }
 
 	signatureAggregator, err := interchain.NewSignatureAggregator(
 		network,
-		logging.Level(logging.Debug),
+		avalogging.NewLogger("ava-logger"),
 		subnetId,
-		interchain.DefaultQuorumPercentage,
+		0,
 		true,
-		peers,
+		[]info.Peer{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create signature aggregator: %w", err)
 	}
 
+	fmt.Printf("Private key: %v", strings.TrimSpace(genesis.EWOQKeyStr))
+	fmt.Printf("Justification: %v", subnetId[:])
 	subnetConversionSignedMessage, err := signatureAggregator.Sign(subnetConversionUnsignedMessage, subnetId[:])
 	if err != nil {
 		return fmt.Errorf("failed to sign subnet conversion unsigned message: %w", err)
@@ -1157,7 +1170,7 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 
 	tx, _, err := contract.TxToMethodWithWarpMessage(
 		fmt.Sprintf("%s/ext/bc/%s/rpc", nodeRpcUri, blockchainId),
-		strings.TrimSpace(genesis.EWOQKey.String()),
+		"56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027",
 		managerAddress,
 		subnetConversionSignedMessage,
 		big.NewInt(0),
