@@ -22,7 +22,7 @@ def run(plan, args):
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
     codespace_name = args.get('codespace-name', "")
-    cpu_arch = args.get("cpu-arch", "arm64") # only needs to bset now to get the correct morpheusvm path, once morpheusvm binaries are pulled from releases can detect cpu of architecture
+    cpu_arch = args.get("cpu-arch", "arm64") # only needs to be set now to get the correct morpheusvm path, once morpheusvm binaries are pulled from releases can detect cpu of architecture
     
     is_etna_deployment = utils.contains_etna_l1(chain_configs)
     vm_name = utils.get_vm_name(chain_configs)
@@ -101,6 +101,7 @@ def run(plan, args):
             token_remote_address = contract_deployer.deploy_token_remote(plan, l1_info[dest_chain_name]["RPCEndpointBaseURL"], "TOK", l1_info[dest_chain_name]["TeleporterRegistryAddress"], l1_info[source_chain_name]["BlockchainIdHex"], token_home_address)
             l1_info[dest_chain_name]["TokenRemoteAddress"] = token_remote_address
 
+    launch_relayer = True
     if launch_relayer == True:
         relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info, is_etna_deployment)
 

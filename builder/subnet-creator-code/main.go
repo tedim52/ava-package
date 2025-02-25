@@ -70,14 +70,23 @@ const (
 	minArgs                = 8
 	nonZeroExitCode        = 1
 
-	baseGenesisPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files"
-	// baseGenesisPath       = "/tmp/subnet-genesis"
-	subnetEvmGenesisPath  = baseGenesisPath + "/example-subnetevm-genesis-with-teleporter.json.tmpl"
-	morpheusVmGenesisPath = baseGenesisPath + "/example-morpheusvm-genesis.json.tmpl"
+	subnetEvmGenesisPathFmtStr  = "/example-subnetevm-genesis-with-teleporter.json.tmpl"
+	morpheusVmGenesisPathFmtStr = "/example-morpheusvm-genesis.json.tmpl"
 
-	baseContractsPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files"
-	// baseContractsPath = "/tmp"
-	etnaContractsPath = baseContractsPath + "/contracts"
+	etnaContractsPathFmtStr = "/contracts"
+
+	// outputs
+	nodeStakingInfoPathFormatFmtStr = "/data/node-%d/staking"
+	nodeIdPathFormatFmtStr          = "/data/node-%d/node_id.txt"
+	parentPathFmtStr                = "/subnet/%v/node-%d"
+	validatorIdsOutputFmtStr        = "/subnet/%v/node-%d/validator_id.txt"
+	subnetIdParentPathFmtStr        = "/subnet/%v"
+	subnetIdOutputFmtStr            = "/subnet/%v/subnetId.txt"
+	blockchainIdOutputFmtStr        = "/subnet/%v/blockchainId.txt"
+	hexChainIdOutputFmtStr          = "/subnet/%v/hexChainId.txt"
+	genesisChainIdOutputFmtStr      = "/subnet/%v/genesisChainId.txt"
+	allocationsOutputFmtStr         = "/subnet/%v/allocations.txt"
+	genesisFileOutputFmtStr         = "/subnet/%v/genesis.json"
 
 	// validate from a minute after now
 	startTimeDelayFromNow = 10 * time.Minute
@@ -85,21 +94,6 @@ const (
 	endTimeFromStartTime = 28 * 24 * time.Hour
 	// random stake weight of 200
 	stakeWeight = uint64(200)
-
-	// outputs
-	tmpDir = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/tmp"
-	// tmpDir                    = "/tmp"
-	nodeStakingInfoPathFormat = tmpDir + "/data/node-%d/staking"
-	nodeIdPathFormat          = tmpDir + "/data/node-%d/node_id.txt"
-	parentPath                = tmpDir + "/subnet/%v/node-%d"
-	validatorIdsOutput        = tmpDir + "/subnet/%v/node-%d/validator_id.txt"
-	subnetIdParentPath        = tmpDir + "/subnet/%v"
-	subnetIdOutput            = tmpDir + "/subnet/%v/subnetId.txt"
-	blockchainIdOutput        = tmpDir + "/subnet/%v/blockchainId.txt"
-	hexChainIdOutput          = tmpDir + "/subnet/%v/hexChainId.txt"
-	genesisChainIdOutput      = tmpDir + "/subnet/%v/genesisChainId.txt"
-	allocationsOutput         = tmpDir + "/subnet/%v/allocations.txt"
-	genesisFileOutput         = tmpDir + "/subnet/%v/genesis.json"
 
 	// delimiters
 	allocationDelimiter = ","
@@ -140,6 +134,23 @@ type Balance struct {
 var (
 	defaultPoll            = common.WithPollFrequency(500 * time.Millisecond)
 	defaultPoAOwnerBalance = new(big.Int).Mul(vm.OneAvax, big.NewInt(100))
+
+	subnetEvmGenesisPath  = os.Getenv("BASE_GENESIS_PATH") + subnetEvmGenesisPathFmtStr
+	morpheusVmGenesisPath = os.Getenv("BASE_GENESIS_PATH") + morpheusVmGenesisPathFmtStr
+
+	etnaContractsPath = os.Getenv("BASE_TMP_PATH") + etnaContractsPathFmtStr
+
+	nodeStakingInfoPathFormat = os.Getenv("BASE_TMP_PATH") + nodeStakingInfoPathFormatFmtStr
+	nodeIdPathFormat          = os.Getenv("BASE_TMP_PATH") + nodeIdPathFormatFmtStr
+	parentPath                = os.Getenv("BASE_TMP_PATH") + parentPathFmtStr
+	validatorIdsOutput        = os.Getenv("BASE_TMP_PATH") + validatorIdsOutputFmtStr
+	subnetIdParentPath        = os.Getenv("BASE_TMP_PATH") + subnetIdParentPathFmtStr
+	subnetIdOutput            = os.Getenv("BASE_TMP_PATH") + subnetIdOutputFmtStr
+	blockchainIdOutput        = os.Getenv("BASE_TMP_PATH") + blockchainIdOutputFmtStr
+	hexChainIdOutput          = os.Getenv("BASE_TMP_PATH") + hexChainIdOutputFmtStr
+	genesisChainIdOutput      = os.Getenv("BASE_TMP_PATH") + genesisChainIdOutputFmtStr
+	allocationsOutput         = os.Getenv("BASE_TMP_PATH") + allocationsOutputFmtStr
+	genesisFileOutput         = os.Getenv("BASE_TMP_PATH") + genesisFileOutputFmtStr
 )
 
 func main() {
@@ -953,7 +964,10 @@ func initializeValidatorManagerContract(subnetId ids.ID, blockchainId ids.ID, no
 		return fmt.Errorf("failed to initialize validator manager: %w", err)
 	}
 
-	fmt.Printf("Validator Manager initialized: %v\n", tx.Hash().Hex())
+	if tx != nil {
+		fmt.Printf("Validator Manager initialized: %v\n", tx.Hash().Hex())
+	}
+
 	return nil
 }
 
@@ -1094,7 +1108,7 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 		return fmt.Errorf("failed to create addressed call payload: %w", err)
 	}
 
-	network := models.NewLocalNetwork() // careful - under the hood this sets the endpoint as the localhost endpoint which won't connect to the node when this is run inside the enclave
+	network := models.NewNetwork(3, 1337, nodeRpcUri, "")
 
 	subnetConversionUnsignedMessage, err := warp.NewUnsignedMessage(
 		network.ID,
@@ -1112,7 +1126,7 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 
 	signatureAggregator, err := interchain.NewSignatureAggregator(
 		network,
-		logging.Level(logging.Info),
+		logging.Level(logging.Debug),
 		subnetId,
 		interchain.DefaultQuorumPercentage,
 		true,

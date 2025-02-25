@@ -16,10 +16,10 @@
         }
     ],
     "additional-services": {
-        "tx-spammer": true,
-        "observability": true,
-        "ictt-frontend": true,
-        "faucet": true,
-        "block-explorer": true
+        "tx-spammer": false,
+        "observability": false,
+        "ictt-frontend": false,
+        "faucet": false,
+        "block-explorer": false
     }
 }

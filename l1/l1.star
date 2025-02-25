@@ -27,8 +27,8 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
 
     # initialize validator set
     # if is_etna:
-    #     builder.initialize_validator_set(plan, node_rpc_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id)
+        # builder.initialize_validator_set(plan, node_rpc_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id)
 
-    #     node_launcher.wait_for_health(plan, bootnode_name)
+        # node_launcher.wait_for_health(plan, bootnode_name)
 
     return chain_name, chain_info

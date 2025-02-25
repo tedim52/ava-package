@@ -41,6 +41,10 @@ def init(plan, node_cfg_map):
                     artifact_names=[subnetevm_genesis_with_teleporter_tmpl, morpheusvm_genesis],
                 ),
                 "/tmp/contracts/": etna_contracts
+            },
+            env_vars={
+                "BASE_TMP_PATH": "/tmp",
+                "BASE_GENESIS_PATH": "/tmp/subnet-genesis"
             }
         )
     )
