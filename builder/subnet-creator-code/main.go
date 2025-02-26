@@ -293,6 +293,15 @@ func main() {
 		}
 		fmt.Printf("subnet '%v' validating chain '%v' has been converted to l1 with tx '%s'", subnetId.String(), blockchainId.String(), converstionTxId.String())
 	case "initvalidatorset":
+		vmID, err := ids.FromString(vmIDStr)
+		if err != nil {
+			fmt.Printf("an error occurred converting '%v' vm id string to ids.ID: %v", vmIDStr, err)
+			os.Exit(nonZeroExitCode)
+		}
+		// morpheusvm doesn't need validator set
+		if vmID.String() == MorpheusVmId {
+			os.Exit(0)
+		}
 		subnetIdPath := fmt.Sprintf(subnetIdOutput, l1Num)
 		subnetIdBytes, err := os.ReadFile(subnetIdPath)
 		if err != nil {

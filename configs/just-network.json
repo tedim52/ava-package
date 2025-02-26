@@ -6,10 +6,6 @@
         "health-check-frequency": "5s"
     },
     "additional-services": {
-        "tx-spammer": false,
-        "observability": false,
-        "ictt-frontend": false,
-        "faucet": false,
-        "block-explorer": false
+        "observability": true
     }
 }
