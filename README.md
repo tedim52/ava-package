@@ -131,15 +131,29 @@ Package breakdown
 A short breakdown of each directory for those who want are understand more about how this package is created or contribute.
 
 - `main.star`
-- `node_launcher.star`
+    -  Main entrypoint that contains the high level logic, structure, and arg configuration for the package. 
+    - If you want to a high level view of the steps this package takes, start here.
 - `builder/`
+    - A simple docker container that contains code necessary to configure avalanche networks.
+    - Contains `genesis-generator-code` thats used to configure primary network, configs for nodes, etc.
+    - Contains `subnet-creator-code` thats used to create and configure local avalanche l1s. Performs all steps needed to create a POA avalanche l1 including creating subnet, blockchain, converting to l1, initializing validator manager contracts and set.
+    - This builder service sticks around for entirety of package creation - downstream starlark logic runs commands on the builder that runs golang code mentioned above.
+    - If you are looking for the avalanche code thats used to configure the networks, start here.
+- `node_launcher.star`
+    - Contains starlark node configuration - data produced by the `builder` is mounted onto the nodes and then used to configure them. 
+    - Contains logic for how nodes are configured to track new l1s configured by the package.
 - `l1/`
+    - Contains starlark logic for configuring l1s. These steps execute commands on the `builder` container to start the l1 in three stages - `create`, `convert`, `initvalidadtorset`
 - `relayer/`
+    - Config to start the ICM relayer service used for relaying messages between avalanche l1s - this is used for the erc20 token bridge that can be spun up in this package.
 - `faucet/`
+    - Starts avalanche faucet service
 - `block-explorer/`
+    - Starts blockscout explorer
 - `observablity/`
+    - Configures prom and grafana
 - `bridge-frontend/`
-
+    - Starts interchain token transfer frontend
 
 Dependencies
 -----------------------
