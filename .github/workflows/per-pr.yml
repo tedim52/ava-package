@@ -23,7 +23,7 @@ jobs:
             "./configs/just-network.json",
             "./configs/one-chain.json",
             "./configs/two-chains-with-bridge.json",
-            "./configs/hypersdk.json",
+            "./configs/hypersdk-amd64.json",
             "./configs/fuji.json",
           ]
     runs-on: ubuntu-latest

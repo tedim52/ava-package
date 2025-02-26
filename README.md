@@ -26,25 +26,34 @@ Once the codespace is set up, run `chmod 777 ./scripts/setup-codespace.sh` follo
 
 #### Configuration
 
-<details>
-    <summary>Click to see configuration</summary>
-
 You can configure this package using the JSON structure below. The default values for each parameter are shown.
-
-// NOTE and TODO: flesh out the configurable params and document available option
 
 ```javascript
 {
-    "base-network-id": "1337",
     // add more dicts to spin up more L1s
     "chain-configs": [
         {
+            // the name of the blockchain you want to have
             "name": "myblockchain",
+
+            // the vm you want to use to start the chain
+            // currently the support options are subnetevm and morpheusvm
+            // the default is subnetevm
             "vm": "subnetevm",
+
+            // the network id for you chain
             "network-id": 555555,
+
+            // whether or not you want to deploy teleporter contracts to your chain, defaults to true
             "enable-teleporter": true,
+
+            // config to deploy an erc20 token bridge between to chains
             "erc20-bridge-config": {
+                // name of token you want to enable bridging for, by default every subnetevm chain spun up by the package automatically deploys a token contract with the name TOK
                 "token-name": "TOK",
+
+                // the chain you want to enable bridging to
+                // must be the name of another chain within this config file
                 "destinations": ["mysecondblockchain"]
             }
         },
@@ -55,16 +64,47 @@ You can configure this package using the JSON structure below. The default value
             "enable-teleporter": true
         }
     ],
+    // number of nodes to start on the network
     "num-nodes": 3,
+
     "node-cfg": {
+        // network id that nodes use to know where to connect, by default this is 1337 - which indicates a local avalanche network
         "network-id": "1337",
         "staking-enabled": false,
         "health-check-frequency": "5s"
-    }
+    },
+    
+    // if you are running inside a codespace, provide this configuration with the value of `echo $CODESPACE_NAME`. 
+    // this is needed to make sure that networking for additional services like the blockscout explorer are proxied to the codepsace correctly
+    "codespace": "verbose-couscous-q45vq44g552657q",
+    
+    // a list of additional infrastructure services you can have the package spin up in the encalve
+    "additional-services": {
+        // starts prometheus + grafana instance connected to one node on the network
+        // provides dashboards for monitoring the Avalanche node - including metrics on all primary network and configured chains, resource usage, etc
+        "observability": true,
+
+        // creates a tx spammer that spams transactions - note this only works for a subnetevm chain
+        // one spammer is created for each subnetevm chain spun up in the package
+        "tx-spammer": true,
+
+        // spins up the interchain token transfer frontend, a UI that allows you to bridge ERC 20 tokens from one chain to another
+        // note this only works for configs that deploy an erc20 token bridge and have at minimum to chains
+        "ictt-frontend": true,
+
+        // spins up a faucet configured for every chain spun up in the package
+        "faucet": true,
+
+
+        // spins up a blockscout explorer for each chain
+        "block-explorer": true
+    },
+
+    // cpu arch of machine this package runs on 
+    // this is only required when spinning up non subnetevm chains, defaults to arm64
+    "cpu-arch": "arm64"
 }
 ```
-
-</details>
 
 Use this package in your package
 --------------------------------
