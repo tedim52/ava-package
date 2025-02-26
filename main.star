@@ -112,7 +112,7 @@ def run(plan, args):
     if additional_services.get("ictt-frontend", False) == True and len(l1_info) >= 2 and launch_relayer == True:
         if codespace_name != "":
             # when using codespace, a proxy needs to be launched to add cors headers for bridge frontend requests to work
-            proxy_port = codespace_proxylaunch_node_proxy(plan, node_info["node-0"]["rpc-url"])
+            proxy_port = codespace_proxy.launch_node_proxy(plan, node_info["node-0"]["rpc-url"])
 
             for chain_name, chain in l1_info.items():
                 # update codespace endpoints to point to proxy instead
