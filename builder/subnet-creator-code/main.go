@@ -49,7 +49,10 @@ const (
 	nodeIdPathFormat       = "/tmp/data/node-%d/node_id.txt"
 
 	// TODO: pass this in via a variable
-	subnetGenesisPath = "/tmp/subnet-genesis/example-subnet-genesis-with-teleporter.json.tmpl"
+	subnetEvmGenesisPath  = "/tmp/subnet-genesis/example-subnetevm-genesis-with-teleporter.json.tmpl"
+	morpheusVmGenesisPath = "/tmp/subnet-genesis/example-morpheusvm-genesis.json.tmpl"
+	// subnetEvmGenesisPath  = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-subnet-genesis-with-teleporter.json.tmpl"
+	// morpheusVmGenesisPath = "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-morpheusvm-genesis.json.tmpl"
 	etnaContractsPath = "/tmp/contracts"
 
 	// validate from a minute after now
@@ -75,6 +78,7 @@ const (
 	allocationDelimiter = ","
 	addrAllocDelimiter  = "="
 
+	// HyperSDKGenesisInitialBalance  uint64 = 3_000_000_000_000_000_000
 	HelperAddressesBalanceHexValue = "ffff86ac351052600000"
 	TeleporterDeployerAddress      = "0x618FEdD9A45a8C456812ecAAE70C671c6249DfaC"
 	TxSpammerAddress               = "0x8db97C7cEcE249c2b98bDC0226Cc4C2A57BF52FC"
@@ -84,6 +88,12 @@ const (
 	RewardCalculatorAddress        = "0xDEADC0DE00000000000000000000000000000000"
 	ValidatorMessagesAddress       = "0xca11ab1e00000000000000000000000000000000"
 )
+
+// hardcoded initial set of ed25519 keys. Each will be initialized with InitialBalance
+// var hyperSdkInitKeys = []string{
+// 	"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
+// 	"8a7be2e0c9a2d09ac2861c34326d6fe5a461d920ba9c2b345ae28e603d517df148735063f8d5d8ba79ea4668358943e5c80bc09e9b2b9a15b5b15db6c1862e88", //nolint:lll
+// }
 
 type wallet struct {
 	p *primary.Wallet
@@ -168,30 +178,39 @@ func main() {
 		}
 
 		var genesisData []byte
-		var genesisJsonFile []byte
 		if isEtnaSubnet {
-			genesisData, err = getEtnaGenesisBytes(genesis.EWOQKey, chainId, chainName)
+			genesisData, err = getEtnaSubnetEVMGenesisBytes(genesis.EWOQKey, chainId, chainName)
 			if err != nil {
 				fmt.Printf("an error occurred getting etna subnet genesis data with chain id '%v':\n %v\n", chainId, err)
 				os.Exit(nonZeroExitCode)
 			}
-			genesisJson := make(map[string]interface{})
-			err = json.Unmarshal(genesisData, &genesisJson)
+			fmt.Println("created genesis for: etna morpheusevm")
+		} else if vmID.String() == "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7" {
+			genesisData, err = getMorpheusVMGenesisBytes(chainId, subnetId.String())
 			if err != nil {
-				fmt.Printf("an error occurred unmarshaling etna subnet genesis data into map:\n%v", genesisData)
+				fmt.Printf("an error occurred getting HyperSDK genesis data with chain id '%v':\n %v\n", chainId, err)
 				os.Exit(nonZeroExitCode)
 			}
-			genesisJsonFile, err = json.MarshalIndent(genesisJson, "", "  ")
-			if err != nil {
-				fmt.Printf("an error occurred marshaling etna subnet genesis map into formatted json:\n%v", genesisJson)
-				os.Exit(nonZeroExitCode)
-			}
+			fmt.Println("created genesis for: morpheusevm")
 		} else {
-			genesisData, err = insertChainIdIntoSubnetGenesisTmpl(subnetGenesisPath, chainId)
+			genesisData, err = getSubnetEVMGenesisBytes(subnetEvmGenesisPath, chainId)
 			if err != nil {
 				fmt.Printf("an error occurred converting subnet genesis tmpl into genesis data with chain id '%v':\n %v\n", chainId, err)
 				os.Exit(nonZeroExitCode)
 			}
+			fmt.Println("created genesis for: subnetevm")
+		}
+		var genesisJsonFile []byte
+		genesisJson := make(map[string]interface{})
+		err = json.Unmarshal(genesisData, &genesisJson)
+		if err != nil {
+			fmt.Printf("an error occurred unmarshaling subnet genesis data into map:\n%v", genesisData)
+			os.Exit(nonZeroExitCode)
+		}
+		genesisJsonFile, err = json.MarshalIndent(genesisJson, "", "  ")
+		if err != nil {
+			fmt.Printf("an error occurred marshaling etna subnet genesis map into formatted json:\n%v", genesisJson)
+			os.Exit(nonZeroExitCode)
 		}
 
 		blockchainId, hexChainId, allocations, genesisChainId, err := createBlockChain(w, subnetId, vmID, chainName, genesisData)
@@ -333,15 +352,18 @@ func addSubnetValidators(w *wallet, subnetId ids.ID, numValidators int) ([]ids.I
 }
 
 func createBlockChain(w *wallet, subnetId ids.ID, vmId ids.ID, chainName string, genesisData []byte) (ids.ID, string, map[string]string, string, error) {
-	var genesis Genesis
-	if err := json.Unmarshal(genesisData, &genesis); err != nil {
-		return ids.Empty, "", nil, "", fmt.Errorf("an error occured while unmarshalling genesis json: %v", genesisData)
-	}
+	var genesisChainId string
 	allocations := map[string]string{}
-	for addr, allocation := range genesis.Alloc {
-		allocations[addr] = allocation.Balance
+	if vmId.String() != "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7" {
+		var genesis Genesis
+		if err := json.Unmarshal(genesisData, &genesis); err != nil {
+			return ids.Empty, "", nil, "", fmt.Errorf("an error occured while unmarshalling genesis json: %v", genesisData)
+		}
+		for addr, allocation := range genesis.Alloc {
+			allocations[addr] = allocation.Balance
+		}
+		genesisChainId = fmt.Sprintf("%d", genesis.Config.ChainId)
 	}
-	genesisChainId := fmt.Sprintf("%d", genesis.Config.ChainId)
 	var nilFxIds []ids.ID
 	createChainTx, err := w.p.P().IssueCreateChainTx(
 		subnetId,
@@ -438,7 +460,7 @@ func printBalances(w *wallet) error {
 	return nil
 }
 
-func insertChainIdIntoSubnetGenesisTmpl(subnetGenesisFilePath string, chainId int) ([]byte, error) {
+func getSubnetEVMGenesisBytes(subnetGenesisFilePath string, chainId int) ([]byte, error) {
 	tmpl, err := template.ParseFiles(subnetGenesisFilePath)
 	if err != nil {
 		return nil, err
@@ -465,7 +487,7 @@ func BytesToAddress(b []byte) [20]byte {
 	return a
 }
 
-func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName string) ([]byte, error) {
+func getEtnaSubnetEVMGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName string) ([]byte, error) {
 	ethAddr := evm.PublicKeyToEthAddress(ownerKey.PublicKey())
 
 	now := time.Now().Unix()
@@ -623,6 +645,79 @@ func getEtnaGenesisBytes(ownerKey *secp256k1.PrivateKey, chainID int, subnetName
 
 	return genesisBytesWithWarpConfig, nil
 }
+
+func getMorpheusVMGenesisBytes(chainId int, subnetId string) ([]byte, error) {
+	// ed25519Addrs := make([]codec.Address, len(hyperSdkInitKeys))
+	// for i, keyHex := range hyperSdkInitKeys {
+	// 	privBytes, err := codec.LoadHex(keyHex, ed25519.PrivateKeyLen)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	priv := ed25519.PrivateKey(privBytes)
+	// 	addr := auth.NewED25519Address(priv.PublicKey())
+	// 	ed25519Addrs[i] = addr
+	// }
+
+	// // allocate the initial balance to the addresses
+	// customAllocs := make([]*hypersdk_genesis.CustomAllocation, 0, len(ed25519Addrs))
+	// for _, prefundedAddr := range ed25519Addrs {
+	// 	customAllocs = append(customAllocs, &hypersdk_genesis.CustomAllocation{
+	// 		Address: prefundedAddr,
+	// 		Balance: HyperSDKGenesisInitialBalance,
+	// 	})
+	// }
+
+	// genesis := hypersdk_genesis.NewDefaultGenesis(customAllocs)
+
+	// // Set WindowTargetUnits to MaxUint64 for all dimensions to iterate full mempool during block building.
+	// genesis.Rules.WindowTargetUnits = hypersdk_fees.Dimensions{math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
+
+	// // Set all limits to MaxUint64 to avoid limiting block size for all dimensions except bandwidth. Must limit bandwidth to avoid building
+	// // a block that exceeds the maximum size allowed by AvalancheGo.
+	// genesis.Rules.MaxBlockUnits = hypersdk_fees.Dimensions{1800000, math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
+	// genesis.Rules.MinBlockGap = minBlockGap.Milliseconds()
+
+	// genesis.Rules.NetworkID = uint32(1)
+	// genesis.Rules.ChainID = ids.GenerateTestID()
+	// empty := ids.ID{}
+	// genesis.Rules.ChainID = empty.Prefix(uint64(chainId))
+
+	// genesisBytes, err := json.Marshal(genesis)
+	// if err != nil {
+	// 	return []byte{}, fmt.Errorf("error occurred marshing hypersdk genesis in json: %v", genesis)
+	// }
+	// fmt.Println(genesisBytes)
+	// fmt.Println(genesis)
+	tmpl, err := template.ParseFiles(morpheusVmGenesisPath)
+	if err != nil {
+		return nil, err
+	}
+	data := struct {
+		ChainId   int
+		NetworkId string
+	}{
+		ChainId:   chainId,
+		NetworkId: subnetId,
+	}
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// func newDefaultAuthFactories() []hypersdk_chain.AuthFactory {
+// 	authFactories := make([]hypersdk_chain.AuthFactory, len(hyperSdkInitKeys))
+// 	for i, keyHex := range hyperSdkInitKeys {
+// 		bytes, err := codec.LoadHex(keyHex, ed25519.PrivateKeyLen)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		authFactories[i] = hypersdk_auth.NewED25519Factory(ed25519.PrivateKey(bytes))
+// 	}
+// 	return authFactories
+// }
 
 func loadHexFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)

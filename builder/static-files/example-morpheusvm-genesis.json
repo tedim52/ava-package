@@ -1,0 +1,60 @@
+{
+  "customAllocation": [
+    {
+      "address": "0x00c4cb545f748a28770042f893784ce85b107389004d6a0e0d6d7518eeae1292d914969017",
+      "balance": 3000000000000000000
+    },
+    {
+      "address": "0x003020338128fc7babb4e5850aace96e589f55b33bda90d62c44651de110ea5b8c0b5ee37f",
+      "balance": 3000000000000000000
+    }
+  ],
+  "initialRules": {
+    "baseUnits": 1,
+    "chainID": "2133143211",
+    "maxActionsPerTx": 16,
+    "maxBlockUnits": {
+      "bandwidth": 1800000,
+      "compute": 18446744073709552000,
+      "storageAllocate": 18446744073709552000,
+      "storageRead": 18446744073709552000,
+      "storageWrite": 18446744073709552000
+    },
+    "maxOutputsPerAction": 1,
+    "minBlockGap": 100,
+    "minEmptyBlockGap": 750,
+    "minUnitPrice": {
+      "bandwidth": 100,
+      "compute": 100,
+      "storageAllocate": 100,
+      "storageRead": 100,
+      "storageWrite": 100
+    },
+    "networkID": 55555,
+    "sponsorStateKeysMaxChunks": [
+      1
+    ],
+    "storageKeyAllocateUnits": 20,
+    "storageKeyReadUnits": 5,
+    "storageKeyWriteUnits": 10,
+    "storageValueAllocateUnits": 5,
+    "storageValueReadUnits": 2,
+    "storageValueWriteUnits": 3,
+    "unitPriceChangeDenominator": {
+      "bandwidth": 48,
+      "compute": 48,
+      "storageAllocate": 48,
+      "storageRead": 48,
+      "storageWrite": 48
+    },
+    "validityWindow": 60000,
+    "windowTargetUnits": {
+      "bandwidth": 18446744073709552000,
+      "compute": 18446744073709552000,
+      "storageAllocate": 18446744073709552000,
+      "storageRead": 18446744073709552000,
+      "storageWrite": 18446744073709552000
+    }
+  },
+  "stateBranchFactor": 16
+}

@@ -22,7 +22,8 @@ def launch(
     image, 
     node_count,  
     vmId, 
-    custom_subnet_vm_url,
+    custom_vm_url,
+    custom_vm_path,
     maybe_codespace_name):
     bootstrap_ips = []
     bootstrap_ids = []
@@ -39,6 +40,7 @@ def launch(
         launch_node_cmd = [
             "nohup",
             "/avalanchego/build/" + EXECUTABLE_PATH,
+            "--plugin-dir=" + ABS_PLUGIN_DIRPATH,
             "--data-dir=" + node_data_dirpath,
             "--config-file=" + node_config_filepath,
             "--http-host=0.0.0.0",
@@ -70,12 +72,16 @@ def launch(
         else: 
             entrypoint=["/bin/sh", "-c", log_file_cmd + " && cd /tmp && tail -F *.log"]
 
+        if custom_vm_path:
+            vm_plugin = plan.upload_files(custom_vm_path)
+            node_files["/tmp/data/hypersdk"]=  vm_plugin
+
         node_service_config = ServiceConfig(
             image=image,
             entrypoint=entrypoint,
             ports={
-                "rpc": PortSpec(number=RPC_PORT_NUM, transport_protocol="TCP", wait=None),
-                "staking": PortSpec(number=STAKING_PORT_NUM, transport_protocol="TCP", wait=None)
+                "rpc": PortSpec(number=RPC_PORT_NUM, application_protocol="http", transport_protocol="TCP", wait=None),
+                "staking": PortSpec(number=STAKING_PORT_NUM, application_protocol="http", transport_protocol="TCP", wait=None)
             },
             files=node_files,
             public_ports=public_ports,
@@ -104,8 +110,10 @@ def launch(
                 )
             )
 
-            if custom_subnet_vm_url:
-                download_to_path_and_untar(plan, node_name, custom_subnet_vm_url, ABS_PLUGIN_DIRPATH + vmId)
+            if custom_vm_path:
+                cp(plan, node_name, "/tmp/data/hypersdk/" + vmId, ABS_PLUGIN_DIRPATH + vmId)
+            elif custom_vm_url:
+                download_to_path_and_untar(plan, node_name, custom_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
             plan.exec(
                 description="Starting node {0} with new launch node cmd {1}".format(index, launch_node_cmd),
@@ -220,4 +228,19 @@ def download_to_path_and_untar(plan, node_name, url, dest):
         recipe=ExecRecipe(
             command=["/bin/sh", "-c", "mv /static_files/subnet-evm {0}".format(dest)]
         )
+    )    
+
+def cp(plan, node_name, src, dest):
+    plan.exec(
+        description="Copying {0} to {1} on {2}".format(src, dest, node_name),
+        service_name=node_name,
+        recipe=ExecRecipe(
+            command=["cp", src, dest]
+        )
     )
+
+
+
+
+
+

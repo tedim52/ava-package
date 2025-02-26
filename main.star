@@ -1,6 +1,6 @@
 builder = import_module("./builder/builder.star")
 node_launcher = import_module("./node_launcher.star")
-l1 = import_module("./l1.star")
+l1 = import_module("./l1/l1.star")
 relayer = import_module("./relayer/relayer.star")
 contract_deployer = import_module("./contract-deployment/contract-deployer.star")
 bridge_frontend = import_module("./bridge-frontend/bridge-frontend.star")
@@ -22,8 +22,10 @@ def run(plan, args):
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
     codespace_name = args.get('codespace-name', "")
+    cpu_arch = args.get("cpu-arch", "arm64") # only needs to bset now to get the correct morpheusvm path, once morpheusvm binaries are pulled from releases can detect cpu of architecture
     
     is_etna_deployment = utils.contains_etna_l1(chain_configs)
+    vm_name = utils.get_vm_name(chain_configs)
     subnet_evm_binary_url = utils.get_subnet_evm_url(plan, chain_configs)
     avalanche_go_image = utils.get_avalanchego_img(chain_configs)
 
@@ -31,7 +33,12 @@ def run(plan, args):
     builder.init(plan, node_cfg)
 
     # generate genesis for primary network (p-chain, x-chain, c-chain)
-    genesis, subnet_evm_id = builder.generate_genesis(plan, network_id, num_nodes, constants.DEFAULT_VM_NAME) # TODO: return vm_ids for all vm names
+    genesis, vm_id = builder.generate_genesis(plan, network_id, num_nodes, vm_name)
+
+    maybe_vm_path = ""
+    if vm_name == constants.HYPERSDK_VM_NAME:
+        vm_id = constants.HYPERSDK_VM_ID
+        maybe_vm_path = utils.get_morpheusvm_binary_path(plan, cpu_arch)
 
     # start avalanche node network
     node_info, bootnode_name = node_launcher.launch(
@@ -40,8 +47,9 @@ def run(plan, args):
         genesis,
         avalanche_go_image,
         num_nodes,
-        subnet_evm_id,
+        vm_id,
         subnet_evm_binary_url,
+        maybe_vm_path,
         codespace_name
     )
     plan.print("Node Info: {0}".format(node_info))
@@ -50,7 +58,7 @@ def run(plan, args):
     l1_info = {}
     for idx, chain in enumerate(chain_configs):
         is_etna_chain = chain.get('etna', False)
-        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], subnet_evm_id, idx, chain["network-id"], is_etna_chain)
+        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], vm_id, idx, chain["network-id"], is_etna_chain)
 
         # teleporter messenger needs to be manually deployed on etna l1s
         if is_etna_chain:

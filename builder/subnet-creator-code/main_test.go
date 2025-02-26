@@ -1,39 +1,40 @@
 package main
 
 import (
-	"bytes"
+	"encoding/json"
 	"os"
 	"testing"
 
-	"encoding/json"
-
-	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/stretchr/testify/require"
 )
 
 func TestInsertChainIdIntoSubnetGenesisTmpl(t *testing.T) {
-	subnetGenesisPath := "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/static-files/example-subnet-genesis-with-teleporter.json.tmpl"
-	networkId := 561234
-	genesisData, err := insertChainIdIntoSubnetGenesisTmpl(subnetGenesisPath, networkId)
+	genesisData, err := getMorpheusVMGenesisBytes(55555, "2133143211")
 	require.NoError(t, err)
 
-	genesisJson, err := bytesToJSON(genesisData)
+	var genesisJson map[string]interface{}
+	err = json.Unmarshal(genesisData, &genesisJson)
 	require.NoError(t, err)
 
-	require.Equal(t, networkId, genesisJson["config"])
-}
-
-func TestGetEtnaGenesisBytes(t *testing.T) {
-	genesisData, err := getEtnaGenesisBytes(genesis.EWOQKey, 55555, "myblockchain")
+	genesisJsonFile, err := json.MarshalIndent(genesisJson, "", "  ")
 	require.NoError(t, err)
 
-	var prettyJSON bytes.Buffer
-	err = json.Indent(&prettyJSON, genesisData, "", "    ")
-	require.NoError(t, err)
-
-	err = os.WriteFile("L1-gensesis.json", prettyJSON.Bytes(), 0644)
+	genesisJsonPath := "/Users/tewodrosmitiku/craft/sandbox/avalabs-package/builder/static-files/example-morpheusvm-genesis.json"
+	err = os.WriteFile(genesisJsonPath, genesisJsonFile, 0777)
 	require.NoError(t, err)
 }
+
+// func TestGetEtnaGenesisBytes(t *testing.T) {
+// 	genesisData, err := getEtnaGenesisBytes(genesis.EWOQKey, 55555, "myblockchain")
+// 	require.NoError(t, err)
+
+// 	var prettyJSON bytes.Buffer
+// 	err = json.Indent(&prettyJSON, genesisData, "", "    ")
+// 	require.NoError(t, err)
+
+// 	err = os.WriteFile("L1-gensesis.json", prettyJSON.Bytes(), 0644)
+// 	require.NoError(t, err)
+// }
 
 func bytesToJSON(data []byte) (map[string]interface{}, error) {
 	var result map[string]interface{}
