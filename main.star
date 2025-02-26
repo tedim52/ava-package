@@ -24,7 +24,6 @@ def run(plan, args):
     codespace_name = args.get('codespace-name', "")
     cpu_arch = args.get("cpu-arch", "arm64") # only needs to be set now to get the correct morpheusvm path, once morpheusvm binaries are pulled from releases can detect cpu of architecture
     
-    is_etna_deployment = utils.contains_etna_l1(chain_configs)
     vm_name = utils.get_vm_name(chain_configs)
     subnet_evm_binary_url = utils.get_subnet_evm_url(plan, chain_configs)
     avalanche_go_image = utils.get_avalanchego_img(chain_configs)
@@ -57,13 +56,10 @@ def run(plan, args):
     # create l1s
     l1_info = {}
     for idx, chain in enumerate(chain_configs):
-        is_etna_chain = chain.get('etna', False)
-        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], vm_id, idx, chain["network-id"], is_etna_chain)
+        chain_name, chain_info = l1.launch_l1(plan, node_info, bootnode_name, num_nodes, chain["name"], vm_id, idx, chain["network-id"])
 
-        # teleporter messenger needs to be manually deployed on etna l1s
-        if is_etna_chain:
-            teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
-            plan.print(teleporter_messenger_address)
+        teleporter_messenger_address = contract_deployer.deploy_teleporter_messenger(plan, chain_info["RPCEndpointBaseURL"], chain_name)
+        plan.print(teleporter_messenger_address)
 
         teleporter_registry_address = contract_deployer.deploy_teleporter_registry(plan, chain_info["RPCEndpointBaseURL"], chain_name)
         plan.print("Teleporter Registry Address on {0}: {1}".format(chain_name, teleporter_registry_address))
@@ -103,7 +99,7 @@ def run(plan, args):
 
     launch_relayer = True
     if launch_relayer == True:
-        relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info, is_etna_deployment)
+        relayer.launch_relayer(plan, node_info[bootnode_name]["rpc-url"], l1_info)
 
     # additional services:
     if additional_services.get("observability", False) == True:
