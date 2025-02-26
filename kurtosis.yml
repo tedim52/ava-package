@@ -1,5 +1,8 @@
 name: "github.com/tedim52/avalabs-package"
 
 replace:
+  # custom package that puts dashboards directly in the grafana package
   github.com/kurtosis-tech/grafana-package: /grafana-package
+
+  # using a custom package that starts the node exporter with prom
   github.com/kurtosis-tech/prometheus-package: /prometheus-package
