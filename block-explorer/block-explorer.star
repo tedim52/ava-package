@@ -26,7 +26,7 @@ def launch_blockscout(
     verif_service = plan.add_service(
         name="blockscout-verif-{0}".format(chain_name),
         config=ServiceConfig(
-            image="ghcr.io/blockscout/smart-contract-verifier:latest",
+            image="ghcr.io/blockscout/smart-contract-verifier:main",
             ports={
                 "http": PortSpec(
                     number=8050,
