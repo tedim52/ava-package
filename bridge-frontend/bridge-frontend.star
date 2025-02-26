@@ -1,4 +1,3 @@
-WEB_APPS_IMAGE = "tedim52/avalanche-web-apps:test"
 
 def launch_bridge_frontend(plan, l1_info, chain_config):
     src_blockchain_id, dest_blockchain_id, token_address, chain_cfgs, token_cfgs = get_bridge_config_info(plan, l1_info, chain_config)
@@ -47,7 +46,7 @@ def launch_bridge_frontend(plan, l1_info, chain_config):
     plan.add_service(
         name="ictt-frontend",
         config=ServiceConfig(
-            image=WEB_APPS_IMAGE,
+            image="tedim52/avalanche-web-apps:test",
             files={
                 "/app/data/": Directory(
                     artifact_names=[chain_cfg_artifact, page_artifact, tokens_artifact],

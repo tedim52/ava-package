@@ -29,11 +29,11 @@ def init(plan, node_cfg_map):
     plan.add_service(
         name=BUILDER_SERVICE_NAME,
         config=ServiceConfig(
-            # image =ImageBuildSpec(
-            #     image_name="tedim52/builder:latest",
-            #     build_context_dir="./"
-            # ),
-            image="tedim52/builder:latest",
+            image =ImageBuildSpec(
+                image_name="tedim52/builder:latest",
+                build_context_dir="./"
+            ),
+            # image="tedim52/builder:latest",
             entrypoint=["sleep", "9999999"],
             files={
                 "/tmp/node-config": node_cfg,
@@ -41,6 +41,10 @@ def init(plan, node_cfg_map):
                     artifact_names=[subnetevm_genesis_with_teleporter_tmpl, morpheusvm_genesis],
                 ),
                 "/tmp/contracts/": etna_contracts
+            },
+            env_vars={
+                "BASE_TMP_PATH": "/tmp",
+                "BASE_GENESIS_PATH": "/tmp/subnet-genesis"
             }
         )
     )
@@ -79,18 +83,16 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, maybe_codespace_u
         description="Creating subnet and blockchain for {0}".format(chain_name),
         service_name = BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "create")]
-        )
+            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "createsubnetandblockchain")]
+        ),
     )
 
-    plan.print("Create output: {0}".format(result["output"]))
-
     plan.exec(
-        description="Adding validators for {0}".format(chain_name),
+        description="Converting subnet to l1 for {0}".format(chain_name),
         service_name = BUILDER_SERVICE_NAME,
         recipe = ExecRecipe(
-            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "addvalidators")]
-        )
+            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "convertsubnettol1")]
+        ),
     )
 
     subnet_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/subnetId.txt".format(l1_counter))
@@ -100,8 +102,8 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, maybe_codespace_u
     genesis_chain_id = utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/genesisChainId.txt".format(subnet_id))
 
     validator_ids = []
-    for index in range (0, num_nodes):
-        validator_ids.append(utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/node-{1}/validator_id.txt".format(subnet_id, index)))
+    # for index in range (0, num_nodes):
+    #     validator_ids.append(utils.read_file_from_service(plan, BUILDER_SERVICE_NAME, "/tmp/subnet/{0}/node-{1}/validator_id.txt".format(subnet_id, index)))
 
     http_trimmed_uri = uri.replace("http://", "", 1)
 
@@ -122,3 +124,12 @@ def create_subnet_and_blockchain_for_l1(plan, uri, public_uri, maybe_codespace_u
         l1_config["CodespaceRPCEndpointBaseURL"] = "{0}/ext/bc/{1}/rpc".format(maybe_codespace_uri, blockchain_id)
 
     return l1_config
+
+def initialize_validator_set(plan, uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id):
+    result = plan.exec(
+        description="Initializing validator set for blockchain for {0}".format(chain_name),
+        service_name = BUILDER_SERVICE_NAME,
+        recipe = ExecRecipe(
+            command = ["/bin/sh", "-c", "./subnet-creator {0} {1} {2} {3} {4} {5} {6} {7}".format(uri, vm_id, chain_name, num_nodes, is_etna, l1_counter, chain_id, "initvalidatorset")]
+        )
+    )
