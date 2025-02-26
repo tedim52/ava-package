@@ -14,7 +14,6 @@ faucet = import_module('./faucet/faucet.star')
 tx_spammer = import_module('./tx_spammer.star')
 block_explorer = import_module('./block-explorer/block-explorer.star')
 
-# TODO: add a docstring
 def run(plan, args):
     node_cfg = args['node-cfg']
     network_id = args['node-cfg']['network-id']
