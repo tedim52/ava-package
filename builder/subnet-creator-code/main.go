@@ -1014,6 +1014,9 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 	slices.SortFunc(validators, func(a, b message.SubnetToL1ConversionValidatorData) int {
 		return bytes.Compare(a.NodeID, b.NodeID)
 	})
+	slices.SortFunc(validatorPayloads, func(a, b InitialValidatorPayload) int {
+		return bytes.Compare(a.NodeID, b.NodeID)
+	})
 	for idx, validator := range validators {
 		fmt.Printf("Bootstrap Validators: %v %v\n", idx, validator.NodeID)
 	}
