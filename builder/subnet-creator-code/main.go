@@ -772,6 +772,9 @@ func convertSubnetToL1(w *wallet, subnetId ids.ID, chainId ids.ID, numValidators
 	if err != nil {
 		return ids.Empty, fmt.Errorf("failed to convert to AvalancheGo subnet validator: %w", err)
 	}
+	for idx, validator := range avaGoBootstrapValidators {
+		fmt.Printf("Ava Go Bootstrap Validators: %v %v\n", idx, validator.NodeID)
+	}
 
 	tx, err := w.p.P().IssueConvertSubnetToL1Tx(
 		subnetId,
@@ -1012,7 +1015,7 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 		return bytes.Compare(a.NodeID, b.NodeID)
 	})
 	for idx, validator := range validators {
-		fmt.Printf("Bootstrap Validators: %v %v", idx, validator.NodeID)
+		fmt.Printf("Bootstrap Validators: %v %v\n", idx, validator.NodeID)
 	}
 
 	subnetConversionData := message.SubnetToL1ConversionData{
@@ -1025,6 +1028,7 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 	if err != nil {
 		return fmt.Errorf("failed to create subnet conversion ID: %w", err)
 	}
+	fmt.Printf("Subnet conversion id: %v\n", subnetConversionId.String())
 
 	addressedCallPayload, err := message.NewSubnetToL1Conversion(subnetConversionId)
 	if err != nil {
@@ -1049,11 +1053,6 @@ func initializeValidatorSet(subnetId ids.ID, blockchainId ids.ID, numValidators 
 	if err != nil {
 		return fmt.Errorf("failed to create unsigned message: %w", err)
 	}
-
-	// peers, err := blockchaincmd.ConvertURIToPeers([]string{nodeRpcUri})
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get extra peers: %w", err)
-	// }
 
 	signatureAggregator, err := interchain.NewSignatureAggregator(
 		network,
