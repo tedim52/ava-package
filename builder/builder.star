@@ -66,6 +66,9 @@ def generate_genesis(plan, network_id, num_nodes, vmName):
             description="Creating config files for each node",
         )
 
+    # the genesis data artifact is a directory of data containing information about the primary network, all the node information (ids, signer/stakings, keys etc.)
+    # this artifact gets placed onto each node downstream and are configured based on this data
+    # do a `kurtosis files inspect <enclave name> generated-genesis-data` to view whats inside
     genesis_data = plan.store_service_files(
         service_name = BUILDER_SERVICE_NAME,
         src = "/tmp/data",

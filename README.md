@@ -126,6 +126,26 @@ Develop on this package
 1. Clone this repo
 1. For your dev loop, run `kurtosis clean -a && kurtosis run .` inside the repo directory
 
+Package breakdown
+-----------------------
+A short breakdown of each directory for those who want are understand more about how this package is created or contribute.
+
+- `main.star`
+- `node_launcher.star`
+- `builder/`
+- `l1/`
+- `relayer/`
+- `faucet/`
+- `block-explorer/`
+- `observablity/`
+- `bridge-frontend/`
+
+
+Dependencies
+-----------------------
+Curious about what docker images and other kurtosis packages this package depends on? 
+
+Run any `kurtosis run .` command with `--dependencies` appended (e.g. `kurtosis run . --args-file configs/two-chains-with-bridge.json --dependencies`) to get a list of dependencies.
 
 <!-------------------------------- LINKS ------------------------------->
 [install-kurtosis]: https://docs.kurtosis.com/install

@@ -8,6 +8,7 @@ BUILDER_SERVICE_NAME = "builder"
 EXECUTABLE_PATH = "avalanchego"
 ABS_PLUGIN_DIRPATH = "/avalanchego/build/plugins/"
 ABS_DATA_DIRPATH = "/tmp/data/"
+HYPERSDK_VM_PATH = "{0}/hypersdk".format(ABS_DATA_DIRPATH)
 RPC_PORT_ID = "rpc"
 RPC_PORT_NUM = 9650
 PUBLIC_IP = "127.0.0.1"
@@ -64,7 +65,7 @@ def launch(
         log_file_cmd = " && ".join(log_files_cmds)
 
         node_files = {}
-        node_files["/tmp/data"] = genesis
+        node_files[ABS_DATA_DIRPATH] = genesis
 
         entrypoint=[]
         if network_id == constants.FUJI_NETWORK_ID:
@@ -74,7 +75,8 @@ def launch(
 
         if custom_vm_path:
             vm_plugin = plan.upload_files(custom_vm_path)
-            node_files["/tmp/data/hypersdk"]=  vm_plugin
+            # if a custom vm path is provided, assume its the morpheusvm/hypersdk
+            node_files[HYPERSDK_VM_PATH]=  vm_plugin
 
         node_service_config = ServiceConfig(
             image=image,
@@ -111,7 +113,7 @@ def launch(
             )
 
             if custom_vm_path:
-                cp(plan, node_name, "/tmp/data/hypersdk/" + vmId, ABS_PLUGIN_DIRPATH + vmId)
+                cp(plan, node_name, HYPERSDK_VM_PATH + vmId, ABS_PLUGIN_DIRPATH + vmId)
             elif custom_vm_url:
                 download_to_path_and_untar(plan, node_name, custom_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
