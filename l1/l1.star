@@ -2,11 +2,11 @@ builder = import_module('../builder/builder.star')
 utils = import_module('../utils.star')
 node_launcher = import_module('../node_launcher.star')
 
-def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_counter, chain_id, is_etna):    # create subnet and blockchain for this l1
+def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_counter, chain_id):    # create subnet and blockchain for this l1
     node_rpc_uri = node_info[bootnode_name]["rpc-url"] 
     public_node_rpc_uri = node_info[bootnode_name]["public-rpc-url"] 
     maybe_codespace_node_uri = node_info[bootnode_name]["codespace-rpc-url"] 
-    chain_info = builder.create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, maybe_codespace_node_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id)
+    chain_info = builder.create_subnet_and_blockchain_for_l1(plan, node_rpc_uri, public_node_rpc_uri, maybe_codespace_node_uri, num_nodes, vm_id, chain_name, l1_counter, chain_id)
     
     subnet_id = chain_info["SubnetId"]
     blockchain_id = chain_info["BlockchainId"]
@@ -26,9 +26,8 @@ def launch_l1(plan, node_info, bootnode_name, num_nodes, chain_name, vm_id, l1_c
     node_launcher.wait_for_health(plan, bootnode_name)
 
     # initialize validator set
-    if is_etna:
-        builder.initialize_validator_set(plan, node_rpc_uri, num_nodes, is_etna, vm_id, chain_name, l1_counter, chain_id)
+    builder.initialize_validator_set(plan, node_rpc_uri, num_nodes, vm_id, chain_name, l1_counter, chain_id)
 
-        node_launcher.wait_for_health(plan, bootnode_name)
+    node_launcher.wait_for_health(plan, bootnode_name)
 
     return chain_name, chain_info
