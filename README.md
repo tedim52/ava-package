@@ -12,7 +12,7 @@ kurtosis run . --enclave avalanche --args-file configs/one-chain.json
 
 Once this repo is public users will also be able to run `kurtosis run github.com/ava-labs/avalanche-package` so they don't have to clone the repo.
 
-You can find other configurations under the `config` folder.
+You can find other configurations under the `config` folder. For example, if you'd like to try out the HyperSDK's starter vm, [`morpheusvm`](https://github.com/ava-labs/hypersdk/tree/main/examples/morpheusvm), run the `hypersdk.json` config.
 
 To remove the created [enclave][enclaves-reference], run `kurtosis enclave rm avalanche -f`.
 
