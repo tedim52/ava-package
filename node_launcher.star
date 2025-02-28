@@ -8,7 +8,7 @@ BUILDER_SERVICE_NAME = "builder"
 EXECUTABLE_PATH = "avalanchego"
 ABS_PLUGIN_DIRPATH = "/avalanchego/build/plugins/"
 ABS_DATA_DIRPATH = "/tmp/data/"
-HYPERSDK_VM_PATH = "{0}/hypersdk".format(ABS_DATA_DIRPATH)
+CUSTOM_VM_PATH = "{0}vms/".format(ABS_DATA_DIRPATH)
 RPC_PORT_ID = "rpc"
 RPC_PORT_NUM = 9650
 PUBLIC_IP = "127.0.0.1"
@@ -75,8 +75,7 @@ def launch(
 
         if custom_vm_path:
             vm_plugin = plan.upload_files(custom_vm_path)
-            # if a custom vm path is provided, assume its the morpheusvm/hypersdk
-            node_files[HYPERSDK_VM_PATH]=  vm_plugin
+            node_files[CUSTOM_VM_PATH]=  vm_plugin
 
         node_service_config = ServiceConfig(
             image=image,
@@ -113,7 +112,7 @@ def launch(
             )
 
             if custom_vm_path:
-                cp(plan, node_name, HYPERSDK_VM_PATH + vmId, ABS_PLUGIN_DIRPATH + vmId)
+                cp(plan, node_name, CUSTOM_VM_PATH + vmId, ABS_PLUGIN_DIRPATH + vmId)
             elif custom_vm_url:
                 download_to_path_and_untar(plan, node_name, custom_vm_url, ABS_PLUGIN_DIRPATH + vmId)
 
