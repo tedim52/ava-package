@@ -76,7 +76,7 @@ You can configure this package using the JSON structure below. The default value
     
     // if you are running inside a codespace, provide this configuration with the value of `echo $CODESPACE_NAME`. 
     // this is needed to make sure that networking for additional services like the blockscout explorer are proxied to the codepsace correctly
-    "codespace": "verbose-couscous-q45vq44g552657q",
+    "codespace-name": "verbose-couscous-q45vq44g552657q",
     
     // a list of additional infrastructure services you can have the package spin up in the encalve
     "additional-services": {
