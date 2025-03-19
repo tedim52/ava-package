@@ -21,10 +21,11 @@ def run(plan, args):
     chain_configs = args.get('chain-configs', [])
     additional_services = args.get('additional-services', {})
     codespace_name = args.get('codespace-name', "")
+    subnet_evm_version = args.get('subnet-evm-version', constants.DEFAULT_SUBNET_EVM_VERSION)
     cpu_arch = args.get("cpu-arch", "arm64") # only needs to be set now to get the correct morpheusvm path, once morpheusvm binaries are pulled from releases can detect cpu of architecture
     
     vm_name = utils.get_vm_name(chain_configs)
-    subnet_evm_binary_url = utils.get_subnet_evm_url(plan, chain_configs)
+    subnet_evm_binary_url = utils.get_subnet_evm_url(plan, subnet_evm_version, chain_configs)
     avalanche_go_image = utils.get_avalanchego_img(chain_configs)
 
     # create builder, responsible for scripts to generate genesis, create subnets, create blockchains
