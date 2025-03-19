@@ -68,7 +68,9 @@ You can configure this package using the JSON structure below. The default value
     "num-nodes": 3,
 
     "node-cfg": {
-        // network id that nodes use to know where to connect, by default this is 1337 - which indicates a local avalanche network
+        // network id that nodes use to know where to connect, by default this is 1337 - which indicates a local avalanche network, options available are:
+        // 1337 - local network (default)
+        // fuji - connects fuji test network. note: connecting to fuji only works with one local node
         "network-id": "1337",
         "staking-enabled": false,
         "health-check-frequency": "5s"
@@ -101,8 +103,12 @@ You can configure this package using the JSON structure below. The default value
     },
 
     // cpu arch of machine this package runs on 
-    // this is only required when spinning up non subnetevm chains, defaults to arm64
-    "cpu-arch": "arm64"
+    // this is only required when spinning up non-subnetevm chains(eg. morpheusvm), defaults to arm64
+    "cpu-arch": "arm64",
+
+    // if running subnetevm l1s, this is the version of subnet evm that will be used
+    // default: 0.6.12
+    "subnet-evm-version": "0.6.12"
 }
 ```
 

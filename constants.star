@@ -2,7 +2,8 @@ DEFAULT_AVALANCHEGO_IMAGE = "avaplatform/avalanchego:v1.12.0-fuji"
 
 HYPERSDK_AVALANCHEGO_IMAGE = "aaronbuchwald/morpheusvm:docker"
 
-DEFAULT_SUBNET_EVM_BINARY_URL_FMT_STR = "https://github.com/ava-labs/subnet-evm/releases/download/v0.6.12/subnet-evm_0.6.12_linux_{0}.tar.gz"
+DEFAULT_SUBNET_EVM_VERSION = "0.6.12"
+DEFAULT_SUBNET_EVM_BINARY_URL_FMT_STR = "https://github.com/ava-labs/subnet-evm/releases/download/v{0}/subnet-evm_{0}_linux_{1}.tar.gz"
 
 DEFAULT_VM_NAME = "subnetevm"
 

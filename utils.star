@@ -29,14 +29,14 @@ def write_contents_to_file(plan, service_name, filename, content):
     )
     return output["output"]
 
-def get_subnet_evm_url(plan, chain_configs):
+def get_subnet_evm_url(plan, subnet_evm_version, chain_configs):
     cpu_arch_result = plan.run_sh(
         description="Determining cpu architecture",
         run="/bin/sh -c \"[ \"$(uname -m | tr -d '\n')\" = \"arm64\" ] || [ \"$(uname -m | tr -d '\n')\" = \"aarch64\" ] && echo -n arm64 || echo -n amd64\""
     )
     cpu_arch = cpu_arch_result.output
     plan.print("Detected CPU arch: {0}".format(cpu_arch))
-    return constants.DEFAULT_SUBNET_EVM_BINARY_URL_FMT_STR.format(cpu_arch)
+    return constants.DEFAULT_SUBNET_EVM_BINARY_URL_FMT_STR.format(subnet_evm_version, cpu_arch)
 
 def get_morpheusvm_binary_path(plan, cpu_arch):
     return "./l1/vms/morpheusvm/linux-{0}/pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7".format(cpu_arch)
